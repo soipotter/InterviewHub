@@ -12,8 +12,9 @@ test.describe('Phase 10D Reported Auth Bug — Stateful Auth Continuity Journey'
     page,
   }) => {
     // 1. Fresh browser context → Login
-    await loginAsUser(page);
-    await page.waitForURL('**/dashboard');
+    const loggedIn = await loginAsUser(page);
+    expect(loggedIn, 'Login must succeed').toBeTruthy();
+    expect(page.url(), 'Should be on dashboard after login').toContain('/dashboard');
     await page.waitForLoadState('networkidle');
 
     // Verify /dashboard header is authenticated
