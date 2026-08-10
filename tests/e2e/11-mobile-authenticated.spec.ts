@@ -86,7 +86,7 @@ test.describe('Mobile Authenticated Flow — 375x812 (Gate 19)', () => {
       await mobileToggle.click();
       await page.waitForTimeout(500);
       // After toggle, nav links should appear
-      const navVisible = await page.locator('nav').isVisible();
+      const navVisible = await page.locator('nav').last().isVisible();
       expect(navVisible).toBeTruthy();
       // Reset
       await mobileToggle.click();
