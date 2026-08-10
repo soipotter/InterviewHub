@@ -101,6 +101,7 @@ test.describe('Register Page', () => {
     await page.goto('/register');
     await page.waitForLoadState('networkidle');
     const emailInput = page.locator('input[type="email"]').first();
+    await emailInput.waitFor({ state: 'visible', timeout: 15000 });
     await expect(emailInput).toBeVisible();
   });
 
