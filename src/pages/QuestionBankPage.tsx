@@ -64,7 +64,7 @@ export const QuestionBankPage: React.FC = () => {
               Frontend Question Bank
             </Badge>
             <span className="text-xs font-mono text-slate-400">
-              Showing {questions.length} of {total} questions
+              Showing {questions.length} of {total ?? 0} questions
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">

@@ -1,0 +1,53 @@
+name: CI — Quality Gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    name: TypeScript, ESLint, Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
+
+  e2e-smoke:
+    name: Playwright E2E Smoke (Chromium)
+    runs-on: ubuntu-latest
+    needs: quality
+    env:
+      E2E_BASE_URL: ${{ secrets.E2E_BASE_URL || 'https://interview-hubb.vercel.app' }}
+      # User credentials supplied via GitHub Secrets — never hardcoded
+      E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+      E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+      E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright Chromium only
+        run: npx playwright install --with-deps chromium
+      - name: Run smoke E2E tests (Chromium only)
+        run: npx playwright test tests/e2e/01-guest-public.spec.ts tests/e2e/02-practice-daily.spec.ts tests/e2e/03-auth-guards.spec.ts --project=chromium
+      - name: Run security tests
+        run: npx playwright test tests/security/security.spec.ts --project=chromium
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
