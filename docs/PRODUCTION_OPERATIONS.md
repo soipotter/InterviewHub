@@ -6,8 +6,8 @@
 - **GitHub Repository**: `https://github.com/soipotter/InterviewHub`
 - **Production Branch**: `main`
 - **Hosting & CDN**: Vercel (Vite + React SPA with HTML5 client-side rewrite)
-- **Database & Backend**: Supabase PostgreSQL + Auth + RLS + Stored Procedures (RPCs)
-- **Observability**: Vercel Web Analytics (`@vercel/analytics`) + Vercel Speed Insights (`@vercel/speed-insights`)
+- **Database & Backend**: Supabase PostgreSQL (Free Tier) + Auth + RLS + Stored Procedures (RPCs)
+- **Observability**: Vercel Web Analytics (`@vercel/analytics` v2.0.1) + Vercel Speed Insights (`@vercel/speed-insights` v2.0.0)
 
 ---
 
@@ -32,20 +32,57 @@
 
 ---
 
-## 3. Disaster Recovery & Backup Strategy
+## 3. Database Backup & Disaster Recovery Strategy
 
-### Automated Backups
-- Supabase automatically maintains daily database backups and point-in-time recovery (PITR) snapshots.
+### Supabase Plan Facts
+- **Current Plan**: Supabase Free Tier
+- **Automatic Daily Backups**: NO (Pro / Team tier feature)
+- **Point-In-Time Recovery (PITR)**: NO (Optional paid add-on on Pro / Team tiers)
+- **Backup Retention**: N/A for Free Tier automatic backups
 
-### Manual Database Backups
-- Before applying major structural migrations or data transformations, create a manual logical backup:
-  ```bash
-  npx supabase db dump --data-only -f backup_$(date +%Y%m%d_%H%M%S).sql
-  ```
+### Manual Logical Backup Commands (Mandatory for Free Tier)
+
+Before applying structural migrations or data transformations, run a manual logical dump:
+
+#### Windows PowerShell:
+```powershell
+$timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+npx supabase db dump --data-only -f "backup_$timestamp.sql"
+```
+
+#### Linux / macOS Bash:
+```bash
+npx supabase db dump --data-only -f "backup_$(date +%Y%m%d_%H%M%S).sql"
+```
 
 ---
 
-## 4. Rollback Procedure
+## 4. Authentication Email Configuration & Custom SMTP Setup
+
+### Auth Email Configuration
+- **Email Confirmation Required**: YES (`EMAIL_CONFIRMATION_REQUIRED = YES`)
+- **Password Recovery Email Enabled**: YES (`PASSWORD_RECOVERY_EMAIL_ENABLED = YES`)
+- **Custom SMTP Configured**: NO (`CUSTOM_SMTP_CONFIGURED = NO` — currently utilizing Supabase built-in default email provider)
+
+### Signup Capacity & Launch Bottleneck
+- **Status**: `SMTP BOTTLENECK`
+- **Assessment**: The built-in Supabase email provider has a strict rate limit of approximately 3-4 emails per hour across the entire project. Inviting multiple beta users will cause email delivery failures (HTTP 429 rate limit error) during user registration.
+
+### Custom SMTP Configuration Guide (Action Required for Launch)
+To resolve the launch email bottleneck, the project administrator must configure a custom SMTP provider in the Supabase Dashboard:
+
+1. **Dashboard Location**: `Supabase Dashboard -> Project Settings -> Authentication -> Email Settings / SMTP Settings`.
+2. **Enable Custom SMTP**: Toggle "Enable Custom SMTP" to ON.
+3. **Recommended Provider Options**:
+   - **Resend** (Recommended): `smtp.resend.com` (Port 465/587)
+   - **SendGrid**: `smtp.sendgrid.net` (Port 587)
+   - **AWS SES**: `email-smtp.<region>.amazonaws.com` (Port 587)
+4. **Input Credentials**: Provide Host, Port, Sender Email, Username, and API Key/Password. Save settings.
+5. **Security Note**: Never commit SMTP passwords or API keys to git repositories.
+
+---
+
+## 5. Rollback Procedure
 
 If a breaking issue or critical bug reaches production:
 
@@ -63,7 +100,7 @@ If a breaking issue or critical bug reaches production:
 5. **DO NOT** use `git push --force` or rewrite remote Git history.
 
 ### Immediate Vercel Rollback (Instant Mitigation)
-1. Log in to the Vercel Dashboard -> InterviewHub project.
+1. Log in to Vercel Dashboard -> InterviewHub project.
 2. Navigate to **Deployments**.
 3. Locate the last known healthy deployment prior to the bad commit.
 4. Click `...` -> **Promote to Production**. This instantly updates the CDN routing to the previous build while the code fix is prepared.
@@ -77,17 +114,18 @@ If a breaking issue or critical bug reaches production:
 
 ---
 
-## 5. Public Beta Rollout Plan
+## 6. Public Beta Rollout Plan
 
 ### Stage A: Closed Beta (10 - 30 Users)
+- **Prerequisite**: Custom SMTP configured in Supabase Dashboard.
 - **Target Audience**: Internal testers, core contributors, and select IT students.
 - **Duration**: 48 - 72 hours.
-- **Monitoring Focus**: Auth session persistence, initial Supabase query latency, login rate limits.
+- **Monitoring Focus**: Auth session persistence, initial Supabase query latency, signup email delivery.
 
 ### Stage B: Expanded Beta (50 - 100 Users)
 - **Target Audience**: Developer community, university tech clubs.
 - **Duration**: 5 - 7 days.
-- **Monitoring Focus**: Community question submissions, daily challenge participation, Vercel Speed Insights Web Vitals (LCP, CLS, INP).
+- **Monitoring Focus**: Community question submissions, daily challenge participation, Vercel Speed Insights Web Vitals.
 
 ### Stage C: General Public Launch
 - **Target Audience**: Public developer audience, social channels, job prep boards.
@@ -95,11 +133,11 @@ If a breaking issue or critical bug reaches production:
   - **Zero** unresolved P0 or P1 bugs.
   - **Zero** recurring authentication or session loss incidents.
   - Vercel Web Analytics and Speed Insights show healthy performance baselines.
-  - Supabase database resource utilization (CPU, RAM, Connections) remain under 50% capacity.
+  - Custom SMTP email delivery rate > 99%.
 
 ---
 
-## 6. Operational Monitoring Checklist
+## 7. Operational Monitoring Checklist
 
 ### Daily Developer Inspection
 - **Vercel Dashboard**:
@@ -113,4 +151,4 @@ If a breaking issue or critical bug reaches production:
   - Check **Performance Advisor**: Audit sequential scans and verify FK index efficiency.
 - **Application Level**:
   - Audit new community question submissions in `/admin/community`.
-  - Review user bug reports submitted via the standard bug template.
+  - Review user bug reports submitted via [docs/BUG_REPORT_TEMPLATE.md](file:///c:/Users/van%20hieu/Downloads/InterviewHub/docs/BUG_REPORT_TEMPLATE.md).
