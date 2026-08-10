@@ -13,8 +13,12 @@
     "test:e2e": "playwright test tests/e2e/ --project=chromium",
     "test:a11y": "playwright test tests/accessibility/ --project=chromium",
     "test:security": "playwright test tests/security/ --project=chromium",
-    "test:smoke": "playwright test tests/e2e/ tests/security/ --project=chromium",
-    "test:all": "playwright test tests/ --project=chromium",
+    "test:smoke": "playwright test tests/e2e/01-guest-public.spec.ts tests/e2e/02-practice-daily.spec.ts tests/e2e/03-auth-guards.spec.ts tests/e2e/05-question-bank.spec.ts tests/security/security.spec.ts --project=chromium",
+    "test:multi-browser": "playwright test tests/e2e/12-multi-browser-critical.spec.ts --project=chromium --project=firefox --project=webkit",
+    "test:auth": "playwright test tests/e2e/06-auth-user-lifecycle.spec.ts tests/e2e/07-practice-result-flow.spec.ts tests/e2e/08-admin-moderation.spec.ts --project=chromium",
+    "test:mobile": "playwright test tests/e2e/11-mobile-authenticated.spec.ts --project=mobile-chrome",
+    "test:all": "playwright test tests/e2e/ tests/security/ tests/accessibility/ --project=chromium",
+    "test:gates": "playwright test tests/ --project=chromium",
     "test:report": "playwright show-report"
   },
   "dependencies": {

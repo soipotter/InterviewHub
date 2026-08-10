@@ -19,8 +19,6 @@ test.describe('Practice & Daily Challenge — Guest', () => {
     expect(bodyText).not.toMatch(/404.*This page could not be found/i);
     // Either a loading spinner resolves OR question content appears
     // Check for any visible interactive content OR a spinner that means it's loading
-    const questionContent = page.locator('input[type="radio"], button[id*="dc-"], .card, [class*="card"]');
-    const contentCount = await questionContent.count();
     // The page should have some UI — at minimum a spinner or content
     expect(bodyText.trim().length, 'Daily challenge page appears to be blank').toBeGreaterThan(50);
   });

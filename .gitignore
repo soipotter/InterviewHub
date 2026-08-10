@@ -37,3 +37,9 @@ pnpm-debug.log*
 # Playwright test artifacts (generated, not source)
 test-results/
 playwright-report/
+
+# k6 load test runner binary
+tests/load/k6*/
+tests/load/*.zip
+tests/load/*.exe
+

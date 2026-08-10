@@ -24,10 +24,7 @@ test.describe('Security — Route Access & Authorization', () => {
     const page = await context.newPage();
     await page.goto('/admin/community');
     await page.waitForLoadState('networkidle');
-    const url = page.url();
-    const bodyText = await page.textContent('body') ?? '';
-    const showsAdminContent = bodyText.includes('Pending') && bodyText.includes('community');
-    expect(showsAdminContent, 'Admin community queue visible to unauthenticated user').toBeFalsy();
+    expect(page.url()).toContain('/login');
     await context.close();
   });
 

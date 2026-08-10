@@ -1,13 +1,10 @@
-import { test as base, expect, Page, BrowserContext } from '@playwright/test';
+/* eslint-disable react-hooks/rules-of-hooks */
+import { test as base, expect } from '@playwright/test';
 
 /**
  * Shared console error fixture.
  * Fails the test if any unexpected uncaught exceptions or console errors occur.
  */
-type ConsolFixtureOptions = {
-  ignoredPatterns?: (string | RegExp)[];
-};
-
 export const test = base.extend<{
   consoleErrors: string[];
   expectNoConsoleErrors: () => void;
