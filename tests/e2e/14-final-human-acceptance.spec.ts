@@ -4,13 +4,12 @@ import { loginAsUser, hasUserCredentials } from '../helpers/auth';
 const SKIP_USER = 'E2E_USER_EMAIL / E2E_USER_PASSWORD not set';
 
 test.describe('Phase 10D.1 Final Human-Equivalent Acceptance Verification', () => {
-  test.beforeEach(({}, testInfo) => {
+  test.beforeEach(() => {
     if (!hasUserCredentials()) test.skip(true, SKIP_USER);
   });
 
   test('Single continuous human-equivalent journey from login to logout across all features', async ({
     page,
-    context,
   }) => {
     // Collect console errors & unhandled page errors
     const consoleErrors: string[] = [];

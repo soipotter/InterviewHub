@@ -19,8 +19,8 @@ test.describe('Phase 10D.2 Final Mutation Journey Verification', () => {
     const alreadyCompleted = page.locator('text=Challenge Completed!');
     if (await alreadyCompleted.isVisible()) {
       console.log('[mutation-audit] Today Daily Challenge already completed — idempotency active ✓');
-      const submitBtn = page.locator('#dc-retry-submit');
-      await expect(submitBtn).not.toBeVisible();
+      const retryBtn = page.locator('#dc-retry-submit');
+      await expect(retryBtn).not.toBeVisible();
       return;
     }
 
@@ -127,23 +127,37 @@ test.describe('Phase 10D.2 Final Mutation Journey Verification', () => {
     await page.waitForURL(/\/practice\/.+/);
     await page.waitForLoadState('networkidle');
 
-    const finishBtn = page.locator('button:has-text("Submit Quiz"), button:has-text("Finish Quiz")').first();
-    await expect(finishBtn).toBeVisible();
+    // Step through questions until finish button appears
+    for (let i = 0; i < 10; i++) {
+      const finishBtn = page.locator('button:has-text("Submit Quiz"), button:has-text("Finish Quiz")');
+      if (await finishBtn.isVisible()) {
+        const submitPromise = page.waitForResponse(
+          (resp) => resp.url().includes('/rpc/submit_practice_session') && resp.status() === 200,
+          { timeout: 15000 }
+        ).catch(() => null);
 
-    // Capture response
-    const submitPromise = page.waitForResponse(
-      (resp) => resp.url().includes('/rpc/submit_practice_session') && resp.status() === 200,
-      { timeout: 15000 }
-    ).catch(() => null);
+        await finishBtn.click();
+        const confirmBtn = page.locator('button:has-text("Submit Anyway"), button:has-text("Confirm")');
+        if (await confirmBtn.isVisible({ timeout: 2000 })) {
+          await confirmBtn.click();
+        }
 
-    await finishBtn.click();
-    const confirmBtn = page.locator('button:has-text("Submit Anyway"), button:has-text("Confirm")');
-    if (await confirmBtn.isVisible({ timeout: 2000 })) {
-      await confirmBtn.click();
+        const submitResp = await submitPromise;
+        console.log('[mutation-audit] Practice submit RPC status:', submitResp ? submitResp.status() : 'submitted');
+        break;
+      }
+
+      const option = page.locator('button:has-text("A."), button:has-text("True"), input[type="radio"]').first();
+      if (await option.isVisible()) {
+        await option.click();
+      }
+
+      const nextBtn = page.locator('button:has-text("Next Question"), button:has-text("Next")');
+      if (await nextBtn.isVisible()) {
+        await nextBtn.click();
+        await page.waitForTimeout(300);
+      }
     }
-
-    const submitResp = await submitPromise;
-    console.log('[mutation-audit] Practice submit RPC status:', submitResp ? submitResp.status() : 'submitted');
 
     await page.waitForURL(/\/results\/.+/);
     await page.waitForLoadState('networkidle');
@@ -155,8 +169,8 @@ test.describe('Phase 10D.2 Final Mutation Journey Verification', () => {
     const pageB = await context.newPage();
 
     // Log in on Tab A
-    await loginAsUser(pageA);
-    await pageA.waitForURL('**/dashboard');
+    const loggedIn = await loginAsUser(pageA);
+    expect(loggedIn).toBeTruthy();
     expect(pageA.url()).toContain('/dashboard');
 
     // Tab B opens /practice
