@@ -97,6 +97,7 @@ export function useCommunityQuestionForm() {
   }, []);
 
   const handleSubmit = useCallback(async () => {
+    if (formState === 'submitting') return;
     setTouched(true);
     const validationErrors = validateCommunityQuestion(values);
     if (Object.keys(validationErrors).length > 0) {
@@ -130,7 +131,7 @@ export function useCommunityQuestionForm() {
       setSubmitError(msg);
       setFormState('error');
     }
-  }, [values]);
+  }, [values, formState]);
 
   const resetForm = useCallback(() => {
     setValues(buildInitialValues());
