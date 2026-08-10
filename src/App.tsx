@@ -20,9 +20,14 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminCommunityPage from './pages/AdminCommunityPage';
 import AdminCommunityDetailPage from './pages/AdminCommunityDetailPage';
 
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
+
 export function App() {
   return (
     <AppProviders>
+      <Analytics />
+      <SpeedInsights />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
