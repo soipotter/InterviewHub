@@ -1,12 +1,11 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
-import { Header } from '../components/layout/Header';
-import { Footer } from '../components/layout/Footer';
 import { Button } from '../components/ui/Button';
 import { Skeleton } from '../components/ui/Skeleton';
 import { ErrorState } from '../components/ui/ErrorState';
 import { Alert } from '../components/ui/Alert';
+import { useAuth } from '../features/auth/hooks/useAuth';
 import { useQuizResult } from '../features/practice/hooks/useQuizResult';
 import { QuizResultSummary } from '../features/practice/components/QuizResultSummary';
 import { QuizCategoryBreakdown } from '../features/practice/components/QuizCategoryBreakdown';
@@ -17,36 +16,10 @@ import { QuizResultActions } from '../features/practice/components/QuizResultAct
 export const QuizResultPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
   const { result, isLoading, isNotFound } = useQuizResult(attemptId);
-
-  const headerNav = (
-    <>
-      <Link to="/questions" className="hover:text-white transition-colors font-medium">
-        Questions
-      </Link>
-      <Link to="/practice" className="hover:text-white transition-colors font-medium">
-        Practice
-      </Link>
-      <Link to="/daily-challenge" className="hover:text-white transition-colors font-medium">
-        Daily Challenge
-      </Link>
-    </>
-  );
-
-  const headerActions = (
-    <Link to="/login">
-      <Button variant="outline" size="sm">
-        Log In
-      </Button>
-    </Link>
-  );
+  const { isAuthenticated } = useAuth();
 
   return (
-    <AppShell
-      header={
-        <Header navLinks={headerNav} userActions={headerActions} mobileNavLinks={headerNav} />
-      }
-      footer={<Footer />}
-    >
+    <AppShell>
       <div className="flex flex-col gap-8 text-left pb-16 max-w-4xl mx-auto w-full">
         {/* Back Navigation Bar */}
         <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
@@ -74,7 +47,7 @@ export const QuizResultPage: React.FC = () => {
           <div className="py-8">
             <ErrorState
               title="Attempt Result Not Found"
-              message="The requested quiz attempt result does not exist in temporary session memory or has expired."
+              message="The requested quiz attempt result does not exist or has expired."
             />
             <div className="flex justify-center mt-4">
               <Link to="/practice">
@@ -89,20 +62,29 @@ export const QuizResultPage: React.FC = () => {
         {/* Loaded Attempt Result View */}
         {!isLoading && !isNotFound && result && (
           <div className="flex flex-col gap-8">
-            {/* Anonymous Session Persistence Alert Banner */}
-            <Alert variant="info" title="Temporary Session Result">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-                <span>
-                  This quiz attempt is saved temporarily in your browser session memory. Create an
-                  account or log in to persist your quiz history and track weak topics over time.
+            {/* Banner: Guest vs Authenticated */}
+            {!isAuthenticated ? (
+              <Alert variant="info" title="Temporary Session Result">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                  <span>
+                    This quiz attempt is saved temporarily in your browser session memory. Create an
+                    account or log in to persist your quiz history and track weak topics over time.
+                  </span>
+                  <Link to="/register" className="shrink-0">
+                    <Button variant="primary" size="sm" className="whitespace-nowrap">
+                      Register to Save →
+                    </Button>
+                  </Link>
+                </div>
+              </Alert>
+            ) : (
+              <Alert variant="success" title="Attempt Persisted to Profile">
+                <span className="text-xs">
+                  This practice attempt has been server-scored and saved to your account history.
+                  You can review your progress anytime on your Dashboard.
                 </span>
-                <Link to="/register" className="shrink-0">
-                  <Button variant="primary" size="sm" className="whitespace-nowrap">
-                    Register to Save →
-                  </Button>
-                </Link>
-              </div>
-            </Alert>
+              </Alert>
+            )}
 
             {/* Score & Stat Summary Banner */}
             <QuizResultSummary result={result} />

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { Container } from './Container';
 import { useAuth } from '../../features/auth/hooks/useAuth';
@@ -21,40 +21,72 @@ export const Header: React.FC<HeaderProps> = ({
   ...props
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = async () => {
     await logout();
     navigate('/', { replace: true });
   };
 
+  const isActive = (path: string) => {
+    if (path === '/' && location.pathname === '/') return true;
+    if (path !== '/' && location.pathname.startsWith(path)) return true;
+    return false;
+  };
+
+  const linkClass = (path: string) =>
+    cn(
+      'transition-colors font-medium',
+      isActive(path)
+        ? 'text-white font-bold border-b-2 border-indigo-500 pb-0.5'
+        : 'text-slate-300 hover:text-white'
+    );
+
   const defaultNavLinks = (
     <>
-      <Link to="/questions" className="hover:text-white transition-colors">
+      <Link to="/questions" className={linkClass('/questions')}>
         Questions
       </Link>
-      <Link to="/practice" className="hover:text-white transition-colors">
+      <Link to="/practice" className={linkClass('/practice')}>
         Practice
       </Link>
       <Link
         to="/daily-challenge"
-        className="hover:text-white transition-colors font-semibold text-amber-400 hover:text-amber-300"
+        className={cn(
+          'transition-colors font-semibold',
+          isActive('/daily-challenge')
+            ? 'text-amber-300 font-bold border-b-2 border-amber-400 pb-0.5'
+            : 'text-amber-400 hover:text-amber-300'
+        )}
       >
         ⚡ Daily
       </Link>
       {isAuthenticated && (
         <>
-          <Link to="/dashboard" className="hover:text-white transition-colors">
+          <Link to="/dashboard" className={linkClass('/dashboard')}>
             Dashboard
           </Link>
-          <Link to="/progress" className="hover:text-white transition-colors">
+
+          <Link to="/progress" className={linkClass('/progress')}>
             Progress
+          </Link>
+          <Link to="/bookmarks" className={linkClass('/bookmarks')}>
+            Bookmarks
+          </Link>
+          <Link to="/community/submit" className={linkClass('/community')}>
+            Submit Q
           </Link>
           {user?.role === 'admin' && (
             <Link
               to="/admin"
-              className="hover:text-white transition-colors font-semibold text-indigo-400 hover:text-indigo-300"
+              className={cn(
+                'transition-colors font-semibold',
+                isActive('/admin')
+                  ? 'text-indigo-300 font-bold border-b-2 border-indigo-400 pb-0.5'
+                  : 'text-indigo-400 hover:text-indigo-300'
+              )}
             >
               🛡️ Admin
             </Link>
@@ -64,27 +96,48 @@ export const Header: React.FC<HeaderProps> = ({
     </>
   );
 
-  const defaultUserActions = isAuthenticated ? (
-    <div className="flex items-center gap-3">
-      <span className="text-xs font-mono text-slate-300 hidden lg:inline-block">{user?.email}</span>
-      <Button variant="outline" size="sm" onClick={handleLogout}>
-        Log Out
-      </Button>
-    </div>
-  ) : (
-    <div className="flex items-center gap-2">
-      <Link to="/login">
-        <Button variant="outline" size="sm">
-          Log In
+  // User Actions State Resolution
+  let resolvedUserActions: React.ReactNode;
+
+  if (userActions) {
+    // If a custom override is provided explicitly, use it
+    resolvedUserActions = userActions;
+  } else if (isLoading) {
+    // Neutral loading skeleton while auth session is initializing (NO Log In / Log Out flash)
+    resolvedUserActions = (
+      <div className="flex items-center gap-2">
+        <div className="h-8 w-20 bg-slate-800/60 rounded animate-pulse" />
+      </div>
+    );
+  } else if (isAuthenticated) {
+    // Authenticated state
+    resolvedUserActions = (
+      <div className="flex items-center gap-3">
+        <span className="text-xs font-mono text-slate-300 hidden lg:inline-block">
+          {user?.email}
+        </span>
+        <Button variant="outline" size="sm" onClick={handleLogout} id="header-logout-btn">
+          Log Out
         </Button>
-      </Link>
-      <Link to="/register" className="hidden sm:inline-block">
-        <Button variant="primary" size="sm">
-          Register
-        </Button>
-      </Link>
-    </div>
-  );
+      </div>
+    );
+  } else {
+    // Unauthenticated state
+    resolvedUserActions = (
+      <div className="flex items-center gap-2">
+        <Link to="/login" id="header-login-link">
+          <Button variant="outline" size="sm">
+            Log In
+          </Button>
+        </Link>
+        <Link to="/register" className="hidden sm:inline-block" id="header-register-link">
+          <Button variant="primary" size="sm">
+            Register
+          </Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <header
@@ -114,13 +167,11 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Desktop User Actions */}
-          <div className="hidden md:flex items-center gap-3">
-            {userActions || defaultUserActions}
-          </div>
+          <div className="hidden md:flex items-center gap-3">{resolvedUserActions}</div>
 
           {/* Mobile Menu Toggle Button */}
           <div className="flex md:hidden items-center gap-2">
-            {userActions || defaultUserActions}
+            {resolvedUserActions}
             <button
               type="button"
               onClick={() => setMobileMenuOpen((prev) => !prev)}

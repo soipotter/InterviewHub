@@ -1,8 +1,6 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
-import { Header } from '../components/layout/Header';
-import { Footer } from '../components/layout/Footer';
 import { Button } from '../components/ui/Button';
 import { Skeleton } from '../components/ui/Skeleton';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -17,35 +15,8 @@ export const QuestionDetailPage: React.FC = () => {
   const { question, relatedQuestions, isLoading, isError, isNotFound, refetch } =
     useQuestionDetail(questionId);
 
-  const headerNav = (
-    <>
-      <Link to="/questions" className="hover:text-white transition-colors font-medium">
-        Questions
-      </Link>
-      <Link to="/practice" className="hover:text-white transition-colors font-medium">
-        Practice
-      </Link>
-      <Link to="/daily-challenge" className="hover:text-white transition-colors font-medium">
-        Daily Challenge
-      </Link>
-    </>
-  );
-
-  const headerActions = (
-    <Link to="/login">
-      <Button variant="outline" size="sm">
-        Log In
-      </Button>
-    </Link>
-  );
-
   return (
-    <AppShell
-      header={
-        <Header navLinks={headerNav} userActions={headerActions} mobileNavLinks={headerNav} />
-      }
-      footer={<Footer />}
-    >
+    <AppShell>
       <div className="flex flex-col gap-6 text-left pb-16">
         {/* Back Navigation Bar */}
         <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">

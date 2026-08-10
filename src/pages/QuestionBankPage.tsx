@@ -1,10 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
-import { Header } from '../components/layout/Header';
-import { Footer } from '../components/layout/Footer';
 import { Badge } from '../components/ui/Badge';
-import { Button } from '../components/ui/Button';
 import { useQuestionFilters } from '../features/questions/hooks/useQuestionFilters';
 import { useQuestions } from '../features/questions/hooks/useQuestions';
 import { QuestionSearch } from '../features/questions/components/QuestionSearch';
@@ -27,35 +23,8 @@ export const QuestionBankPage: React.FC = () => {
   const { questions, total, page, totalPages, isLoading, isError, isEmpty, refetch } =
     useQuestions(filters);
 
-  const headerNav = (
-    <>
-      <Link to="/questions" className="text-white font-bold border-b-2 border-indigo-500 pb-0.5">
-        Questions
-      </Link>
-      <Link to="/practice" className="hover:text-white transition-colors">
-        Practice
-      </Link>
-      <Link to="/daily-challenge" className="hover:text-white transition-colors">
-        Daily Challenge
-      </Link>
-    </>
-  );
-
-  const headerActions = (
-    <Link to="/login">
-      <Button variant="outline" size="sm">
-        Log In
-      </Button>
-    </Link>
-  );
-
   return (
-    <AppShell
-      header={
-        <Header navLinks={headerNav} userActions={headerActions} mobileNavLinks={headerNav} />
-      }
-      footer={<Footer />}
-    >
+    <AppShell>
       <div className="flex flex-col gap-6 text-left pb-12">
         {/* Page Header */}
         <div className="flex flex-col gap-2 border-b border-slate-800 pb-6">

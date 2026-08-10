@@ -139,32 +139,10 @@ const FEATURE_HIGHLIGHTS = [
 ];
 
 export const LandingPage: React.FC = () => {
-  const headerNav = (
-    <>
-      <Link to="/questions" className="hover:text-white transition-colors">
-        Questions
-      </Link>
-      <Link to="/practice" className="hover:text-white transition-colors">
-        Practice
-      </Link>
-      <Link to="/daily-challenge" className="hover:text-white transition-colors">
-        Daily Challenge
-      </Link>
-    </>
-  );
-
-  const headerActions = (
-    <Link to="/login">
-      <Button variant="outline" size="sm">
-        Log In
-      </Button>
-    </Link>
-  );
-
   return (
     <div className="min-h-screen flex flex-col bg-slate-900 text-slate-100 selection:bg-indigo-500 selection:text-white">
       {/* Header Layout */}
-      <Header navLinks={headerNav} userActions={headerActions} mobileNavLinks={headerNav} />
+      <Header />
 
       <main className="flex-1">
         {/* HERO SECTION */}
