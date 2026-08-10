@@ -96,22 +96,27 @@ export const Header: React.FC<HeaderProps> = ({
     </>
   );
 
-  // User Actions State Resolution
-  let resolvedUserActions: React.ReactNode;
+  // Desktop User Actions — IDs defined here (authoritative, single instance in DOM)
+  let desktopUserActions: React.ReactNode;
+  // Mobile inline User Actions — compact, no IDs to prevent duplicate-ID violations
+  let mobileUserActions: React.ReactNode;
 
   if (userActions) {
-    // If a custom override is provided explicitly, use it
-    resolvedUserActions = userActions;
+    // Custom override: use for both (caller is responsible for ID uniqueness)
+    desktopUserActions = userActions;
+    mobileUserActions = userActions;
   } else if (isLoading) {
     // Neutral loading skeleton while auth session is initializing (NO Log In / Log Out flash)
-    resolvedUserActions = (
+    const loadingSkeleton = (
       <div className="flex items-center gap-2">
         <div className="h-8 w-20 bg-slate-800/60 rounded animate-pulse" />
       </div>
     );
+    desktopUserActions = loadingSkeleton;
+    mobileUserActions = loadingSkeleton;
   } else if (isAuthenticated) {
     // Authenticated state
-    resolvedUserActions = (
+    desktopUserActions = (
       <div className="flex items-center gap-3">
         <span className="text-xs font-mono text-slate-300 hidden lg:inline-block">
           {user?.email}
@@ -121,9 +126,17 @@ export const Header: React.FC<HeaderProps> = ({
         </Button>
       </div>
     );
+    // Mobile: compact — no email display, no ID (desktop is authoritative)
+    mobileUserActions = (
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={handleLogout}>
+          Log Out
+        </Button>
+      </div>
+    );
   } else {
     // Unauthenticated state
-    resolvedUserActions = (
+    desktopUserActions = (
       <div className="flex items-center gap-2">
         <Link to="/login" id="header-login-link">
           <Button variant="outline" size="sm">
@@ -133,6 +146,16 @@ export const Header: React.FC<HeaderProps> = ({
         <Link to="/register" className="hidden sm:inline-block" id="header-register-link">
           <Button variant="primary" size="sm">
             Register
+          </Button>
+        </Link>
+      </div>
+    );
+    // Mobile: compact — no IDs (desktop is authoritative)
+    mobileUserActions = (
+      <div className="flex items-center gap-2">
+        <Link to="/login">
+          <Button variant="outline" size="sm">
+            Log In
           </Button>
         </Link>
       </div>
@@ -166,12 +189,12 @@ export const Header: React.FC<HeaderProps> = ({
             </nav>
           </div>
 
-          {/* Desktop User Actions */}
-          <div className="hidden md:flex items-center gap-3">{resolvedUserActions}</div>
+          {/* Desktop User Actions — IDs live here only (single instance) */}
+          <div className="hidden md:flex items-center gap-3">{desktopUserActions}</div>
 
-          {/* Mobile Menu Toggle Button */}
+          {/* Mobile: compact user actions (no IDs) + hamburger menu toggle */}
           <div className="flex md:hidden items-center gap-2">
-            {resolvedUserActions}
+            {mobileUserActions}
             <button
               type="button"
               onClick={() => setMobileMenuOpen((prev) => !prev)}
