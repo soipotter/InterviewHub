@@ -1,5 +1,5 @@
 import { supabase } from '../../../services/supabase';
-import { Category, Question } from '../../questions/types/question';
+import { Category, Question, QuestionType, Difficulty } from '../../questions/types/question';
 import { DbQuestionRow, mapRowToQuestion } from '../../questions/utils/mapQuestion';
 import { QuizConfig, QuizState, QuizAttemptResult, QuestionResultItem } from '../types/practice';
 
@@ -15,6 +15,36 @@ function shuffleArray<T>(array: T[]): T[] {
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
   return copy;
+}
+
+interface RpcQuestionItem {
+  id: string;
+  title: string;
+  slug: string;
+  category: string;
+  topic: string;
+  difficulty: Difficulty;
+  type: QuestionType;
+  shortSummary: string;
+  explanationMarkdown?: string;
+  codeSnippet?: string;
+  interviewTip?: string;
+  options?: string[];
+  correctAnswer?: string;
+  tags?: string[];
+}
+
+interface RpcQuestionResultItem {
+  questionId: string;
+  questionTitle: string;
+  category: Category;
+  difficulty: Difficulty;
+  type: QuestionType;
+  selectedAnswer?: string;
+  correctAnswer?: string;
+  isCorrect: boolean;
+  explanationMarkdown?: string;
+  interviewTip?: string;
 }
 
 export const practiceService = {
@@ -49,9 +79,60 @@ export const practiceService = {
   },
 
   /**
-   * Generates a randomized practice quiz instance from Supabase questions and saves active state to sessionStorage
+   * Generates a practice quiz instance.
+   * - Authenticated: Creates a server-authoritative session via create_practice_session RPC.
+   * - Anonymous: Generates a temporary local session from Supabase questions in sessionStorage.
    */
   async generateQuiz(config: QuizConfig): Promise<QuizState> {
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUser = authData?.user;
+
+    if (currentUser) {
+      // Authenticated flow: call server RPC to issue practice session
+      const { data, error } = await supabase.rpc('create_practice_session', {
+        p_category: config.category,
+        p_difficulty: config.difficulty,
+        p_type: config.type,
+        p_count: config.count,
+      });
+
+      if (!error && data && data.sessionId) {
+        const questions: Question[] = ((data.questions as RpcQuestionItem[]) || []).map((q) => ({
+          id: q.id,
+          title: q.title,
+          slug: q.slug,
+          category: q.category as Category,
+          topic: q.topic,
+          difficulty: q.difficulty,
+          type: q.type,
+          shortSummary: q.shortSummary,
+          explanationMarkdown: q.explanationMarkdown,
+          codeSnippet: q.codeSnippet,
+          interviewTip: q.interviewTip,
+          options: Array.isArray(q.options) ? q.options : [],
+          correctAnswer: q.correctAnswer,
+          tags: Array.isArray(q.tags) ? q.tags : [],
+          estimatedMinutes: 3,
+        }));
+
+        const quizId = data.sessionId;
+        const quizState: QuizState = {
+          id: quizId,
+          sessionId: data.sessionId,
+          config: data.config || config,
+          questions,
+          currentQuestionIndex: 0,
+          selectedAnswers: {},
+          startedAt: Date.now(),
+          isCompleted: false,
+        };
+
+        this.saveQuizState(quizState);
+        return quizState;
+      }
+    }
+
+    // Anonymous flow: local randomized quiz in sessionStorage
     const matching = await this.getMatchingQuestions(config);
     const randomized = shuffleArray(matching);
     const selectedQuestions = randomized.slice(0, Math.min(config.count, matching.length));
@@ -73,13 +154,65 @@ export const practiceService = {
   },
 
   /**
-   * Retrieves active quiz state by ID from sessionStorage
+   * Retrieves active quiz state by ID from sessionStorage.
    */
   getQuizById(quizId: string): QuizState | null {
     try {
       const json = sessionStorage.getItem(`${QUIZ_STORAGE_PREFIX}${quizId}`);
       if (!json) return null;
       return JSON.parse(json) as QuizState;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Asynchronously retrieves active quiz state from sessionStorage or restores from server RPC if authenticated.
+   */
+  async getQuizByIdAsync(quizId: string): Promise<QuizState | null> {
+    const local = this.getQuizById(quizId);
+    if (local) return local;
+
+    // Try restoring from Supabase server RPC if quizId is a valid UUID
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(quizId);
+    if (!isUuid) return null;
+
+    try {
+      const { data, error } = await supabase.rpc('get_practice_session', { p_session_id: quizId });
+      if (error || !data) return null;
+
+      const questions: Question[] = ((data.questions as RpcQuestionItem[]) || []).map((q) => ({
+        id: q.id,
+        title: q.title,
+        slug: q.slug,
+        category: q.category as Category,
+        topic: q.topic,
+        difficulty: q.difficulty,
+        type: q.type,
+        shortSummary: q.shortSummary,
+        explanationMarkdown: q.explanationMarkdown,
+        codeSnippet: q.codeSnippet,
+        interviewTip: q.interviewTip,
+        options: Array.isArray(q.options) ? q.options : [],
+        correctAnswer: q.correctAnswer,
+        tags: Array.isArray(q.tags) ? q.tags : [],
+        estimatedMinutes: 3,
+      }));
+
+      const restored: QuizState = {
+        id: data.sessionId,
+        sessionId: data.sessionId,
+        config: data.config,
+        questions,
+        currentQuestionIndex: 0,
+        selectedAnswers: {},
+        startedAt: new Date(data.createdAt).getTime(),
+        isCompleted: data.status === 'completed',
+        completedAt: data.completedAt ? new Date(data.completedAt).getTime() : undefined,
+      };
+
+      this.saveQuizState(restored);
+      return restored;
     } catch {
       return null;
     }
@@ -97,53 +230,65 @@ export const practiceService = {
   },
 
   /**
-   * Persists a finalized quiz attempt and per-question answer records atomically using PostgreSQL RPC save_quiz_attempt_with_answers.
+   * Finishes active quiz, computes score and question result items server-side via RPC for authenticated users,
+   * or locally for anonymous users.
    */
-  async saveQuizAttemptToSupabase(attempt: QuizAttemptResult): Promise<void> {
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      const currentUserId = userData?.user?.id || null;
+  async finishQuiz(quizId: string): Promise<QuizAttemptResult | null> {
+    const quizState = await this.getQuizByIdAsync(quizId) || this.getQuizById(quizId);
+    if (!quizState) return null;
 
-      const attemptPayload = {
-        attemptId: attempt.attemptId,
-        user_id: currentUserId,
-        quizId: attempt.quizId,
-        config: attempt.config,
-        totalQuestions: attempt.totalQuestions,
-        correctAnswersCount: attempt.correctAnswersCount,
-        incorrectAnswersCount: attempt.incorrectAnswersCount,
-        scorePercentage: attempt.scorePercentage,
-        startedAt: new Date(attempt.startedAt).toISOString(),
-        completedAt: new Date(attempt.completedAt).toISOString(),
-      };
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUser = authData?.user;
+    const sessionId = quizState.sessionId || (quizState.id.length === 36 ? quizState.id : null);
 
-      const answersPayload = attempt.questionResults.map((qr) => ({
-        questionId: qr.questionId,
-        selectedAnswer: qr.selectedAnswer || null,
-        isCorrect: qr.isCorrect,
+    if (currentUser && sessionId) {
+      // Authenticated flow: call submit_practice_session RPC
+      const answersPayload = quizState.questions.map((q) => ({
+        questionId: q.id,
+        selectedAnswer: quizState.selectedAnswers[q.id] || null,
       }));
 
-      // Atomically insert attempt parent and answer child records via RPC
-      const { error } = await supabase.rpc('save_quiz_attempt_with_answers', {
-        p_attempt: attemptPayload,
+      const { data, error } = await supabase.rpc('submit_practice_session', {
+        p_session_id: sessionId,
         p_answers: answersPayload,
       });
 
-      if (error) {
-        console.error('[InterviewHub] RPC error saving atomic quiz attempt:', error);
+      if (!error && data && data.attemptId) {
+        quizState.isCompleted = true;
+        quizState.completedAt = Date.now();
+        this.saveQuizState(quizState);
+
+        const questionResults: QuestionResultItem[] = ((data.questionResults as RpcQuestionResultItem[]) || []).map((qr) => ({
+          questionId: qr.questionId,
+          questionTitle: qr.questionTitle,
+          category: qr.category as Category,
+          difficulty: qr.difficulty,
+          type: qr.type,
+          selectedAnswer: qr.selectedAnswer || undefined,
+          correctAnswer: qr.correctAnswer || undefined,
+          isCorrect: qr.isCorrect,
+          explanationMarkdown: qr.explanationMarkdown || '',
+          interviewTip: qr.interviewTip || undefined,
+        }));
+
+        return {
+          attemptId: data.attemptId,
+          quizId: data.quizId || `quiz_${sessionId}`,
+          config: data.config || quizState.config,
+          totalQuestions: data.totalQuestions,
+          correctAnswersCount: data.correctAnswersCount,
+          incorrectAnswersCount: data.incorrectAnswersCount,
+          scorePercentage: data.scorePercentage,
+          startedAt: quizState.startedAt,
+          completedAt: Date.now(),
+          questionResults,
+        };
+      } else if (error) {
+        console.error('[InterviewHub] RPC error submitting practice session:', error);
       }
-    } catch (err) {
-      console.error('[InterviewHub] Unexpected error persisting atomic quiz attempt:', err);
     }
-  },
 
-  /**
-   * Finishes active quiz, computes score and question result items, and persists attempt to Supabase atomically.
-   */
-  async finishQuiz(quizId: string): Promise<QuizAttemptResult | null> {
-    const quizState = this.getQuizById(quizId);
-    if (!quizState) return null;
-
+    // Anonymous flow: local score computation, sessionStorage-only
     const completedAt = Date.now();
     let correctCount = 0;
 
@@ -188,9 +333,6 @@ export const practiceService = {
     quizState.isCompleted = true;
     quizState.completedAt = completedAt;
     this.saveQuizState(quizState);
-
-    // Save finalized attempt atomically to Supabase
-    await this.saveQuizAttemptToSupabase(attemptResult);
 
     return attemptResult;
   },

@@ -18,15 +18,22 @@ export function useQuizRunner(quizId: string | undefined) {
       return;
     }
 
-    const loaded = practiceService.getQuizById(quizId);
-    if (!loaded) {
-      setIsNotFound(true);
-      setQuizState(null);
-    } else {
-      setQuizState(loaded);
-      setIsNotFound(false);
-    }
-    setIsLoading(false);
+    let isMounted = true;
+    practiceService.getQuizByIdAsync(quizId).then((loaded) => {
+      if (!isMounted) return;
+      if (!loaded) {
+        setIsNotFound(true);
+        setQuizState(null);
+      } else {
+        setQuizState(loaded);
+        setIsNotFound(false);
+      }
+      setIsLoading(false);
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, [quizId]);
 
   const currentIndex = quizState?.currentQuestionIndex ?? 0;

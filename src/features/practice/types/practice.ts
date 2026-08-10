@@ -9,6 +9,7 @@ export interface QuizConfig {
 
 export interface QuizState {
   id: string;
+  sessionId?: string;
   config: QuizConfig;
   questions: Question[];
   currentQuestionIndex: number;
