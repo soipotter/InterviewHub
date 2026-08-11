@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { bookmarkService } from '../services/bookmarkService';
+import { invalidateDashboardCache } from '../../dashboard/hooks/useDashboard';
 
 export function useBookmark(questionId: string) {
   const { user } = useAuth();
@@ -31,6 +32,7 @@ export function useBookmark(questionId: string) {
         await bookmarkService.addBookmark(user?.id, questionId);
         setIsBookmarked(true);
       }
+      invalidateDashboardCache();
     } finally {
       setIsLoading(false);
     }

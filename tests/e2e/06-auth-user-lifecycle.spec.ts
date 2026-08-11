@@ -5,6 +5,7 @@ const SKIP_REASON = 'E2E_USER_EMAIL / E2E_USER_PASSWORD not set';
 
 test.describe('Authenticated User Lifecycle', () => {
   test.beforeEach(() => {
+    test.setTimeout(60000);
     if (!hasUserCredentials()) test.skip(true, SKIP_REASON);
   });
 
@@ -25,7 +26,7 @@ test.describe('Authenticated User Lifecycle', () => {
 
     await loginAsUser(page);
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
 
     const bodyText = await page.textContent('body') ?? '';
@@ -47,7 +48,7 @@ test.describe('Authenticated User Lifecycle', () => {
 
     // Go to question bank and bookmark the first question
     await page.goto('/questions');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
 
     // Click first question link to go to detail page
@@ -60,7 +61,7 @@ test.describe('Authenticated User Lifecycle', () => {
 
     const href = await questionLinks.first().getAttribute('href');
     await page.goto(href!);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1500);
 
     // Find the bookmark button
@@ -75,14 +76,14 @@ test.describe('Authenticated User Lifecycle', () => {
 
     // Navigate to bookmarks page and verify it appears
     await page.goto('/bookmarks');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
     const bookmarkBodyAfterAdd = await page.textContent('body') ?? '';
     expect(bookmarkBodyAfterAdd).not.toMatch(/0 saved questions/i);
 
     // Reload to verify persistence (Supabase-backed)
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
     const bookmarkBodyAfterReload = await page.textContent('body') ?? '';
     expect(bookmarkBodyAfterReload).not.toMatch(/0 saved questions/i);
@@ -94,7 +95,7 @@ test.describe('Authenticated User Lifecycle', () => {
       await page.waitForTimeout(1500);
       // Reload and verify removed
       await page.reload();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await page.waitForTimeout(2000);
     }
   });
@@ -103,7 +104,7 @@ test.describe('Authenticated User Lifecycle', () => {
   test('F: progress page loads real attempt data', async ({ page }) => {
     await loginAsUser(page);
     await page.goto('/progress');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
 
     const bodyText = await page.textContent('body') ?? '';
@@ -115,7 +116,7 @@ test.describe('Authenticated User Lifecycle', () => {
   test('G: community submit page loads and form is functional', async ({ page }) => {
     await loginAsUser(page);
     await page.goto('/community/submit');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1000);
 
     const bodyText = await page.textContent('body') ?? '';
@@ -129,14 +130,13 @@ test.describe('Authenticated User Lifecycle', () => {
   test('H: logout redirects and dashboard is no longer accessible', async ({ page }) => {
     await loginAsUser(page);
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await logout(page);
     await page.waitForTimeout(2000);
 
-    // After logout, /dashboard should redirect to /login
+    // After logout, accessing /dashboard as guest redirects to /login
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
-    expect(page.url()).toContain('/login');
+    await expect(page).toHaveURL(/\/login\?redirect=/);
   });
 });

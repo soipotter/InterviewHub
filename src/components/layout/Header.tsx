@@ -126,10 +126,10 @@ export const Header: React.FC<HeaderProps> = ({
         </Button>
       </div>
     );
-    // Mobile: compact — no email display, no ID (desktop is authoritative)
+    // Mobile: compact — no email display, distinct ID for mobile selector
     mobileUserActions = (
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={handleLogout}>
+        <Button variant="outline" size="sm" onClick={handleLogout} id="mobile-header-logout-btn">
           Log Out
         </Button>
       </div>
@@ -150,10 +150,10 @@ export const Header: React.FC<HeaderProps> = ({
         </Link>
       </div>
     );
-    // Mobile: compact — no IDs (desktop is authoritative)
+    // Mobile: compact — distinct ID for mobile selector
     mobileUserActions = (
       <div className="flex items-center gap-2">
-        <Link to="/login">
+        <Link to="/login" id="mobile-header-login-link">
           <Button variant="outline" size="sm">
             Log In
           </Button>

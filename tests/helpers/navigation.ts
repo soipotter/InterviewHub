@@ -1,7 +1,7 @@
 import { Page } from '@playwright/test';
 
 export const BASE_URL =
-  process.env.E2E_BASE_URL || 'https://interview-hubb.vercel.app';
+  process.env.E2E_BASE_URL || 'http://localhost:3000';
 
 /** Routes under test */
 export const ROUTES = {

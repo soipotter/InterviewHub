@@ -16,46 +16,56 @@ const ALL_CATEGORIES: Category[] = [
 
 export const dashboardService = {
   /**
-   * Aggregates real dashboard metrics from Supabase bookmarks, practice attempts,
-   * and Daily Challenge completion history.
+   * Aggregates real dashboard metrics concurrently from Supabase.
+   *
+   * Lifetime aggregate stats (questionsCompleted, overallAccuracy, practiceAttempts,
+   * categoryStats) use the FULL user history via lightweight aggregate queries.
+   *
+   * Recent Attempts list is limited to 5 with full detail (questionResults).
+   *
+   * All queries run concurrently via Promise.all — no N+1.
    */
   async getDashboardData(userId?: string): Promise<DashboardData> {
-    const [bookmarkedIds, attempts, dailyStats] = await Promise.all([
-      bookmarkService.getBookmarkedQuestionIds(userId),
-      practiceService.getUserAttempts(userId),
-      userId ? dailyChallengeService.getUserDailyChallengeStats(userId) : Promise.resolve(null),
-    ]);
+    const [bookmarkedIds, recentAttempts, dailyStats, aggregates, categoryBreakdown] =
+      await Promise.all([
+        bookmarkService.getBookmarkedQuestionIds(userId),
+        practiceService.getUserAttempts(userId, 5),
+        userId
+          ? dailyChallengeService.getUserDailyChallengeStats(userId)
+          : Promise.resolve(null),
+        userId
+          ? practiceService.getAttemptAggregates(userId)
+          : Promise.resolve(null),
+        userId
+          ? practiceService.getCategoryBreakdown(userId)
+          : Promise.resolve([]),
+      ]);
 
-    const practiceAttempts = attempts.length;
-    let totalQuestionsAnswered = 0;
-    let totalCorrectCount = 0;
-
-    const categoryMap = new Map<Category, { correct: number; total: number }>();
-    ALL_CATEGORIES.forEach((cat) => categoryMap.set(cat, { correct: 0, total: 0 }));
-
-    attempts.forEach((attempt) => {
-      totalQuestionsAnswered += attempt.totalQuestions;
-      totalCorrectCount += attempt.correctAnswersCount;
-
-      attempt.questionResults.forEach((qr) => {
-        const existing = categoryMap.get(qr.category) || { correct: 0, total: 0 };
-        existing.total += 1;
-        if (qr.isCorrect) existing.correct += 1;
-        categoryMap.set(qr.category, existing);
-      });
-    });
-
+    // Lifetime stats from full-history aggregates (not limited to 5)
+    const questionsCompleted = aggregates?.questionsCompleted ?? 0;
+    const totalCorrect = aggregates?.totalCorrect ?? 0;
     const overallAccuracy =
-      totalQuestionsAnswered > 0
-        ? Math.round((totalCorrectCount / totalQuestionsAnswered) * 100)
+      questionsCompleted > 0
+        ? Math.round((totalCorrect / questionsCompleted) * 100)
         : 0;
 
     const stats: DashboardSummaryStats = {
-      questionsCompleted: totalQuestionsAnswered,
+      questionsCompleted,
       overallAccuracy,
       bookmarkedCount: bookmarkedIds.length,
-      practiceAttempts,
+      practiceAttempts: aggregates?.practiceAttempts ?? 0,
     };
+
+    // Category stats from full-history breakdown
+    const categoryMap = new Map<Category, { correct: number; total: number }>();
+    ALL_CATEGORIES.forEach((cat) => categoryMap.set(cat, { correct: 0, total: 0 }));
+
+    categoryBreakdown.forEach((item) => {
+      const cat = item.category as Category;
+      if (categoryMap.has(cat)) {
+        categoryMap.set(cat, { correct: item.correct, total: item.total });
+      }
+    });
 
     const categoryStats: DashboardCategoryStat[] = Array.from(categoryMap.entries()).map(
       ([category, data]) => ({
@@ -68,7 +78,7 @@ export const dashboardService = {
 
     return {
       stats,
-      recentAttempts: attempts.slice(0, 5),
+      recentAttempts: recentAttempts.slice(0, 5),
       categoryStats,
       dailyChallengeStats: dailyStats ?? undefined,
     };

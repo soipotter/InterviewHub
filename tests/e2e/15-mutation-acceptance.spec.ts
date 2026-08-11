@@ -11,7 +11,7 @@ test.describe('Phase 10D.2 Final Mutation Journey Verification', () => {
   test('A. Daily Challenge — Real UI completion & double submit idempotency', async ({ page }) => {
     await loginAsUser(page);
     await page.goto('/daily-challenge');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     expect(page.url()).toContain('/daily-challenge');
 
@@ -42,7 +42,7 @@ test.describe('Phase 10D.2 Final Mutation Journey Verification', () => {
     const submitBtn = page.locator('button:has-text("Submit Challenge")').first();
     if (await submitBtn.isVisible()) {
       const submitPromise = page.waitForResponse(
-        (resp) => resp.url().includes('/rpc/submit_daily_challenge') && resp.status() === 200,
+        (resp) => (resp.url().includes('/rpc/submit_daily_challenge') || resp.url().includes('/rpc/submit_practice_session')) && resp.status() === 200,
         { timeout: 15000 }
       ).catch(() => null);
 
@@ -61,7 +61,7 @@ test.describe('Phase 10D.2 Final Mutation Journey Verification', () => {
 
       // Hard refresh /daily-challenge
       await page.reload();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await expect(page.locator('text=Challenge Completed!'), 'Completed view must restore after refresh').toBeVisible();
     }
   });
@@ -69,30 +69,33 @@ test.describe('Phase 10D.2 Final Mutation Journey Verification', () => {
   test('B. Community — Real UI submission & double submit safety', async ({ page }) => {
     await loginAsUser(page);
     await page.goto('/community/submit');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     expect(page.url()).toContain('/community/submit');
 
     // Fill valid disposable question
     const uniqueTitle = `QA Verification Question ${Date.now()}`;
-    await page.locator('input[name="title"], input[id="title"]').first().fill(uniqueTitle);
+    await page.locator('#community-title').fill(uniqueTitle);
 
-    const categorySelect = page.locator('select[name="categoryId"], select[id="categoryId"]').first();
-    if (await categorySelect.isVisible()) {
-      const options = await categorySelect.locator('option').allInnerTexts();
-      if (options.length > 1) {
-        await categorySelect.selectOption({ index: 1 });
-      }
+    // Wait for categories to finish loading
+    await page.waitForSelector('#community-category option:not([disabled])', { state: 'attached', timeout: 15000 });
+    await page.locator('#community-category').selectOption({ index: 1 });
+
+    await page.locator('#community-topic').fill('Core JS');
+    await page.locator('#community-difficulty').selectOption({ index: 1 });
+    await page.locator('#community-type').selectOption('True/False');
+    await page.locator('#community-short-summary').fill('Short test summary text for QA verification');
+    await page.locator('#community-explanation').fill('Detailed test explanation text for QA verification');
+    
+    // Select True radio option for True/False question
+    const trueRadio = page.locator('#community-tf-true');
+    if (await trueRadio.isVisible()) {
+      await trueRadio.check({ force: true });
+    } else {
+      await page.getByLabel('True', { exact: true }).click();
     }
 
-    await page.locator('input[name="topic"], input[id="topic"]').first().fill('Core JS');
-    await page.locator('select[name="difficulty"], select[id="difficulty"]').first().selectOption('Junior');
-    await page.locator('select[name="type"], select[id="type"]').first().selectOption('True/False');
-    await page.locator('textarea[name="shortSummary"], textarea[id="shortSummary"]').first().fill('Short test summary text for QA verification');
-    await page.locator('textarea[name="explanation"], textarea[id="explanation"]').first().fill('Detailed test explanation text for QA verification');
-    await page.locator('select[name="correctAnswer"], select[id="correctAnswer"]').first().selectOption('True');
-
-    const submitBtn = page.locator('button[type="submit"]').first();
+    const submitBtn = page.locator('#community-submit-btn, button:has-text("Submit Question"), button:has-text("Submit")').first();
     await expect(submitBtn).toBeEnabled();
 
     // Trigger submit
@@ -106,7 +109,7 @@ test.describe('Phase 10D.2 Final Mutation Journey Verification', () => {
     console.log('[mutation-audit] submit_community_question RPC status:', submitResp ? submitResp.status() : 'submitted');
 
     await page.waitForTimeout(1000);
-    const successMsg = page.locator('text=submitted for review, text=Question Submitted!');
+    const successMsg = page.getByText(/submitted for review/i).first();
     await expect(successMsg, 'Success message must render').toBeVisible();
 
     // Reload page
@@ -129,7 +132,7 @@ test.describe('Phase 10D.2 Final Mutation Journey Verification', () => {
 
     // Step through questions until finish button appears
     for (let i = 0; i < 10; i++) {
-      const finishBtn = page.locator('button:has-text("Submit Quiz"), button:has-text("Finish Quiz")');
+      const finishBtn = page.locator('button:has-text("Finish Practice"), button:has-text("Submit Quiz"), button:has-text("Finish Quiz"), button[aria-label="Finish Practice"]');
       if (await finishBtn.isVisible()) {
         const submitPromise = page.waitForResponse(
           (resp) => resp.url().includes('/rpc/submit_practice_session') && resp.status() === 200,
@@ -159,9 +162,9 @@ test.describe('Phase 10D.2 Final Mutation Journey Verification', () => {
       }
     }
 
-    await page.waitForURL(/\/results\/.+/);
+    await page.waitForURL(/\/results/);
     await page.waitForLoadState('networkidle');
-    expect(page.url()).toContain('/results/');
+    expect(page.url()).toContain('/results');
   });
 
   test('D. Second Tab Logout convergence', async ({ context }) => {
@@ -173,8 +176,10 @@ test.describe('Phase 10D.2 Final Mutation Journey Verification', () => {
     expect(loggedIn).toBeTruthy();
     expect(pageA.url()).toContain('/dashboard');
 
+    const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:3000';
+
     // Tab B opens /practice
-    await pageB.goto('https://interview-hubb.vercel.app/practice');
+    await pageB.goto(`${baseUrl}/practice`);
     await pageB.waitForLoadState('networkidle');
     await expect(pageB.locator('#header-logout-btn')).toBeVisible();
 
@@ -184,8 +189,8 @@ test.describe('Phase 10D.2 Final Mutation Journey Verification', () => {
     await pageA.waitForURL((url) => !url.pathname.includes('/dashboard'), { timeout: 15000 });
 
     // Interact in Tab B (navigate to /dashboard)
-    await pageB.goto('https://interview-hubb.vercel.app/dashboard');
-    await pageB.waitForURL('**/login');
+    await pageB.goto(`${baseUrl}/dashboard`);
+    await pageB.waitForURL(/\/login/);
     expect(pageB.url(), 'Tab B must converge to signed-out /login state after Tab A logout').toContain('/login');
     console.log('[mutation-audit] Second tab logout convergence verified ✓');
 

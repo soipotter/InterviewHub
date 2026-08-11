@@ -1,5 +1,6 @@
 import { supabase } from '../../../services/supabase';
 import { DbQuestionRow, mapRowToQuestion } from '../../questions/utils/mapQuestion';
+import { invalidateDashboardCache } from '../../dashboard/hooks/useDashboard';
 import {
   DailyChallenge,
   DailyChallengeCompletion,
@@ -77,6 +78,8 @@ export const dailyChallengeService = {
       scorePercentage: number;
       alreadyCompleted: boolean;
     };
+
+    invalidateDashboardCache();
 
     return {
       completionId: row.completionId,

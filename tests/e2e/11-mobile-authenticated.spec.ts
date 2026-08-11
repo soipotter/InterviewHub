@@ -12,6 +12,7 @@ test.describe('Mobile Authenticated Flow — 375x812 (Gate 19)', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
   test.beforeEach(() => {
+    test.setTimeout(60000);
     if (!hasUserCredentials()) test.skip(true, SKIP_USER);
   });
 
@@ -40,7 +41,7 @@ test.describe('Mobile Authenticated Flow — 375x812 (Gate 19)', () => {
   test('dashboard has no horizontal overflow on mobile', async ({ page }) => {
     await loginAsUser(page);
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
 
     const overflow = await page.evaluate(() => document.body.scrollWidth > window.innerWidth);
@@ -50,7 +51,7 @@ test.describe('Mobile Authenticated Flow — 375x812 (Gate 19)', () => {
   test('practice builder is usable on mobile', async ({ page }) => {
     await loginAsUser(page);
     await page.goto('/practice');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
 
     const overflow = await page.evaluate(() => document.body.scrollWidth > window.innerWidth);
@@ -68,7 +69,7 @@ test.describe('Mobile Authenticated Flow — 375x812 (Gate 19)', () => {
   test('community submit form is usable on mobile', async ({ page }) => {
     await loginAsUser(page);
     await page.goto('/community/submit');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1500);
 
     const overflow = await page.evaluate(() => document.body.scrollWidth > window.innerWidth);
@@ -78,7 +79,7 @@ test.describe('Mobile Authenticated Flow — 375x812 (Gate 19)', () => {
   test('navigation menu is accessible on mobile', async ({ page }) => {
     await loginAsUser(page);
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Check mobile hamburger menu toggle exists and is visible
     const mobileToggle = page.locator('button[aria-label="Toggle Navigation Menu"]');

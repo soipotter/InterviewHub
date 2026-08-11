@@ -2,6 +2,7 @@ import { supabase } from '../../../services/supabase';
 import { Category, Question, QuestionType, Difficulty } from '../../questions/types/question';
 import { DbQuestionRow, mapRowToQuestion } from '../../questions/utils/mapQuestion';
 import { QuizConfig, QuizState, QuizAttemptResult, QuestionResultItem } from '../types/practice';
+import { invalidateDashboardCache } from '../../dashboard/hooks/useDashboard';
 
 const QUIZ_STORAGE_PREFIX = 'ih_quiz_';
 
@@ -271,6 +272,8 @@ export const practiceService = {
           interviewTip: qr.interviewTip || undefined,
         }));
 
+        invalidateDashboardCache();
+
         return {
           attemptId: data.attemptId,
           quizId: data.quizId || `quiz_${sessionId}`,
@@ -434,7 +437,7 @@ export const practiceService = {
   /**
    * Retrieves completed attempt history for user from Supabase.
    */
-  async getUserAttempts(userId?: string): Promise<QuizAttemptResult[]> {
+  async getUserAttempts(userId?: string, limit?: number): Promise<QuizAttemptResult[]> {
     let query = supabase
       .from('quiz_attempts')
       .select('*')
@@ -443,18 +446,96 @@ export const practiceService = {
     if (userId) {
       query = query.eq('user_id', userId);
     }
+    if (limit && limit > 0) {
+      query = query.limit(limit);
+    }
 
     const { data: attemptsRows, error } = await query;
     if (error || !attemptsRows || attemptsRows.length === 0) {
       return [];
     }
 
-    const results: QuizAttemptResult[] = [];
-    for (const attemptRow of attemptsRows) {
-      const res = await this.getAttemptResult(attemptRow.id);
-      if (res) results.push(res);
+    const results = await Promise.all(
+      attemptsRows.map((attemptRow) => this.getAttemptResult(attemptRow.id))
+    );
+
+    return results.filter((res): res is QuizAttemptResult => res !== null);
+  },
+
+  /**
+   * Lightweight aggregate query over ALL quiz_attempts for a user.
+   * Single query, no joins, no N+1. Returns lifetime totals.
+   */
+  async getAttemptAggregates(userId: string): Promise<{
+    practiceAttempts: number;
+    questionsCompleted: number;
+    totalCorrect: number;
+  }> {
+    const { data, error } = await supabase
+      .from('quiz_attempts')
+      .select('total_questions, correct_count')
+      .eq('user_id', userId);
+
+    if (error || !data || data.length === 0) {
+      return { practiceAttempts: 0, questionsCompleted: 0, totalCorrect: 0 };
     }
 
-    return results;
+    return {
+      practiceAttempts: data.length,
+      questionsCompleted: data.reduce((sum, r) => sum + (r.total_questions || 0), 0),
+      totalCorrect: data.reduce((sum, r) => sum + (r.correct_count || 0), 0),
+    };
+  },
+
+  /**
+   * Per-category breakdown over ALL quiz_answers for a user's attempts.
+   * Single query with joins to questions→categories. No N+1.
+   */
+  async getCategoryBreakdown(userId: string): Promise<
+    Array<{ category: string; correct: number; total: number }>
+  > {
+    // Step 1: Get all attempt IDs for this user (lightweight, no joins)
+    const { data: attempts, error: attError } = await supabase
+      .from('quiz_attempts')
+      .select('id')
+      .eq('user_id', userId);
+
+    if (attError || !attempts || attempts.length === 0) return [];
+
+    const attemptIds = attempts.map((a) => a.id);
+
+    // Step 2: Get all answers for those attempts with question category
+    const { data: answers, error: ansError } = await supabase
+      .from('quiz_answers')
+      .select('is_correct, questions!inner(categories!inner(name))')
+      .in('attempt_id', attemptIds);
+
+    if (ansError || !answers) return [];
+
+    // Step 3: Aggregate by category
+    const catMap = new Map<string, { correct: number; total: number }>();
+
+    answers.forEach((ans) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = ans as any;
+      const catName: string =
+        row.questions?.categories?.name ??
+        (Array.isArray(row.questions?.categories)
+          ? row.questions.categories[0]?.name
+          : undefined) ??
+        'Unknown';
+
+      const existing = catMap.get(catName) || { correct: 0, total: 0 };
+      existing.total += 1;
+      if (row.is_correct) existing.correct += 1;
+      catMap.set(catName, existing);
+    });
+
+    return Array.from(catMap.entries()).map(([category, data]) => ({
+      category,
+      correct: data.correct,
+      total: data.total,
+    }));
   },
 };
+

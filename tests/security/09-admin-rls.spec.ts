@@ -41,10 +41,9 @@ test.describe('Admin RLS Security Regression (Gates 6, 14)', () => {
     // Here we confirm the UI route guard is in place
     await page.goto('/admin');
     await page.waitForLoadState('networkidle');
-    const adminUrl = page.url();
-    expect(adminUrl).not.toContain('/admin');
+    await expect(page.getByText(/403|Access Restricted|don't have permission/i).first()).toBeVisible();
     
-    console.log('[rls-security] Normal user admin route blocked at UI level ✓');
+    console.log('[rls-security] Normal user admin route blocked with 403 UnauthorizedView ✓');
     console.log('[rls-security] Database-level RLS hardening verified in Phase 8D.1 ✓');
   });
 

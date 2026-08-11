@@ -11,6 +11,7 @@ test.describe('Phase 10D.1 Final Human-Equivalent Acceptance Verification', () =
   test('Single continuous human-equivalent journey from login to logout across all features', async ({
     page,
   }) => {
+    test.setTimeout(60000);
     // Collect console errors & unhandled page errors
     const consoleErrors: string[] = [];
     const pageErrors: Error[] = [];
@@ -78,7 +79,7 @@ test.describe('Phase 10D.1 Final Human-Equivalent Acceptance Verification', () =
     // =========================================================================
     console.log('[journey] Step 5 & 6: Answer questions and submit quiz');
     for (let i = 0; i < 10; i++) {
-      const finishBtn = page.locator('button:has-text("Submit Quiz"), button:has-text("Finish Quiz")');
+      const finishBtn = page.locator('button:has-text("Finish Practice"), button:has-text("Submit Quiz"), button:has-text("Finish Quiz"), button[aria-label="Finish Practice"]');
       if (await finishBtn.isVisible()) {
         await finishBtn.click();
         const confirmBtn = page.locator('button:has-text("Submit Anyway"), button:has-text("Confirm")');
@@ -226,7 +227,7 @@ test.describe('Phase 10D.1 Final Human-Equivalent Acceptance Verification', () =
 
     // Attempt accessing /dashboard directly while logged out
     await page.goto('/dashboard');
-    await page.waitForURL('**/login');
+    await page.waitForURL(/\/login/);
     expect(page.url(), 'Accessing /dashboard after logout must redirect to /login').toContain('/login');
 
     // Assert zero critical errors

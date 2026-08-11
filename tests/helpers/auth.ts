@@ -62,11 +62,9 @@ export async function loginAsAdmin(page: Page): Promise<boolean> {
  * Perform logout via the header button.
  */
 export async function logout(page: Page): Promise<void> {
-  const logoutBtn = page.getByRole('button', { name: /log out|sign out/i });
-  if (await logoutBtn.isVisible()) {
-    await logoutBtn.click();
-    await page.waitForTimeout(2000);
-  }
+  const logoutBtn = page.locator('#header-logout-btn, #mobile-header-logout-btn').first();
+  await logoutBtn.click();
+  await page.waitForTimeout(1000);
 }
 
 /**

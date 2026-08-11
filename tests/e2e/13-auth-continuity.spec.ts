@@ -68,7 +68,7 @@ test.describe('Phase 10D Reported Auth Bug — Stateful Auth Continuity Journey'
 
     // 4. Complete Practice Quiz
     for (let i = 0; i < 10; i++) {
-      const finishBtn = page.locator('button:has-text("Submit Quiz"), button:has-text("Finish Quiz")');
+      const finishBtn = page.locator('button:has-text("Finish Practice"), button:has-text("Submit Quiz"), button:has-text("Finish Quiz"), button[aria-label="Finish Practice"]');
       if (await finishBtn.isVisible()) {
         const submitRpcPromise = page.waitForResponse(
           (resp) => resp.url().includes('/rpc/submit_practice_session') && resp.status() === 200,

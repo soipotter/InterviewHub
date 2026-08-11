@@ -1,5 +1,6 @@
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../../../services/supabase';
+import { invalidateDashboardCache } from '../../dashboard/hooks/useDashboard';
 import {
   AuthResult,
   AuthSession,
@@ -138,6 +139,7 @@ export const authService = {
     if (error) {
       throw new Error(error.message);
     }
+    invalidateDashboardCache();
   },
 
   /**
