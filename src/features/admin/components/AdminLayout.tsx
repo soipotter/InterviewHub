@@ -14,6 +14,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navItems = [
     { label: 'Dashboard', path: '/admin' },
     { label: 'Community Moderation', path: '/admin/community' },
+    { label: 'Ingested Questions', path: '/admin/questions/imports' },
   ];
 
   return (

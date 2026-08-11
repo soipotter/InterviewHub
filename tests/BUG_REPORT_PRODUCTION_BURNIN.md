@@ -2,10 +2,10 @@
 
 | Bug ID | Severity | Route | Description | Root Cause | Regression Test | Fix Commit | Status |
 | :--- | :---: | :--- | :--- | :--- | :--- | :--- | :---: |
+| BUG-13.1-01 | P1 | `/questions/comm-*` | Community published question link rendered "Question Not Found" | `getQuestionById` used `startsWith('q-')` which failed for `comm-` IDs, querying `slug` instead of `id` | `scratch/test_query.cjs` & `tests/e2e/22-community-publish-linkage.spec.ts` | `b720978` | **CLOSED** |
 
 ## Summary
-- Total Defects Discovered: **0** (P0: 0, P1: 0, P2: 0, P3: 0)
-- Clean Production Pass 1: **PASS** (0 defects)
-- Clean Production Pass 2: **PASS** (0 defects)
-- Clean Production Pass 3: **PASS** (0 defects)
-- Verification Status: **PRODUCTION BURN-IN STABLE**
+- Total Defects Discovered: **1** (P0: 0, P1: 1, P2: 0, P3: 0)
+- Total Defects Resolved: **1**
+- Production Retest (5/5 Repetitions): **PASS** (5/5 PASS)
+- Verification Status: **COMMUNITY PUBLICATION STABLE**

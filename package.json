@@ -19,7 +19,8 @@
     "test:mobile": "playwright test tests/e2e/11-mobile-authenticated.spec.ts --project=mobile-chrome",
     "test:all": "playwright test tests/e2e/ tests/security/ tests/accessibility/ --project=chromium",
     "test:gates": "playwright test tests/ --project=chromium",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "ingest:interviews": "tsx scripts/ingestInterviews.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.2",

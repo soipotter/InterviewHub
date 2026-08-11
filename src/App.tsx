@@ -19,6 +19,7 @@ import AdminGuard from './features/admin/components/AdminGuard';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminCommunityPage from './pages/AdminCommunityPage';
 import AdminCommunityDetailPage from './pages/AdminCommunityDetailPage';
+import AdminIngestionPage from './pages/AdminIngestionPage';
 
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
@@ -104,6 +105,14 @@ export function App() {
           element={
             <AdminGuard>
               <AdminCommunityDetailPage />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="/admin/questions/imports"
+          element={
+            <AdminGuard>
+              <AdminIngestionPage />
             </AdminGuard>
           }
         />
