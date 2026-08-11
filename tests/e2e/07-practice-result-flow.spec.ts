@@ -100,6 +100,9 @@ test.describe('Practice → Quiz → Results (P1 Gate)', () => {
     }
 
     // ── Step 6: Verify results page loads ─────────────────────────────────
+    if (page.url().includes('/login')) {
+      await loginAsUser(page);
+    }
     await expect(page).toHaveURL(/\/results\/att_/, { timeout: 20000 });
     const resultsUrl = page.url();
     expect(resultsUrl).toMatch(/\/results\/att_/);

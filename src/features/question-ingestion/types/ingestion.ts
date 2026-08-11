@@ -58,6 +58,7 @@ export interface IngestionProvenance {
   location?: string | null;
   locationEvidence?: string | null;
   marketVerification: 'verified' | 'uncertain';
+  questionDirection?: QuestionDirection | null;
   seniority: SeniorityLevel;
   round?: string | null;
   category: string;

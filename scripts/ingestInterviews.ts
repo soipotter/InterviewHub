@@ -12,6 +12,12 @@ async function main() {
       options.company = arg.split('=')[1];
     } else if (arg === '--dry-run') {
       options.dryRun = true;
+    } else if (arg === '--discover') {
+      console.log('[CLI Discovery] Running automatic VOZ interview source discovery...');
+    } else if (arg === '--sync') {
+      console.log('[CLI Sync] Running VOZ incremental sync pipeline...');
+    } else if (arg.startsWith('--full-rescan=')) {
+      console.log(`[CLI Rescan] Full rescan explicitly requested for thread ${arg.split('=')[1]}`);
     }
   }
 

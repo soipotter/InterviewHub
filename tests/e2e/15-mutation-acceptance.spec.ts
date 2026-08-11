@@ -176,7 +176,7 @@ test.describe('Phase 10D.2 Final Mutation Journey Verification', () => {
     expect(loggedIn).toBeTruthy();
     expect(pageA.url()).toContain('/dashboard');
 
-    const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.E2E_BASE_URL || 'https://interview-hubb.vercel.app';
 
     // Tab B opens /practice
     await pageB.goto(`${baseUrl}/practice`);

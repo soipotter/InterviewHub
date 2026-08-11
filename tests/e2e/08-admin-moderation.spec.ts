@@ -81,7 +81,7 @@ test.describe('Admin Moderation Lifecycle', () => {
     await page.waitForTimeout(1000);
 
     // Confirm in modal
-    const confirmApproveBtn = page.locator('button:has-text("Confirm Approve"), button:has-text("Approve & Publish"), button:has-text("Yes, Approve")').first();
+    const confirmApproveBtn = page.locator('#confirm-approve-btn, div[role="dialog"] button:has-text("Approve & Publish"), button:has-text("Confirm Approve")').first();
     if (await confirmApproveBtn.isVisible()) {
       await confirmApproveBtn.click();
     }
