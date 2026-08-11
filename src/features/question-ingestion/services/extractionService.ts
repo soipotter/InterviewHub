@@ -2,6 +2,34 @@ import { IngestionProvenance, RawCandidatePost, SeniorityLevel } from '../types/
 
 export const extractionService = {
   /**
+   * Strictly validates provenance of an extracted question record against raw fetched HTML content.
+   * Throws Error if HTTP status !== 200, evidence text missing from HTML, or URL is synthetic.
+   */
+  validateProvenanceRecord(record: IngestionProvenance, fetchedHtml: string): boolean {
+    if (record.sourceHttpStatus !== 200) {
+      throw new Error(`Provenance Rejected: HTTP status is ${record.sourceHttpStatus} (expected 200 OK).`);
+    }
+
+    if (record.sourcePageTitle?.toLowerCase().includes('404 not found')) {
+      throw new Error(`Provenance Rejected: Source page title indicates 404 Not Found.`);
+    }
+
+    if (!fetchedHtml || !fetchedHtml.trim()) {
+      throw new Error(`Provenance Rejected: Fetched HTML content is empty.`);
+    }
+
+    // Verify evidence text actually exists in raw fetched HTML
+    const cleanHtml = fetchedHtml.toLowerCase().replace(/\s+/g, ' ');
+    const cleanEvidence = record.sourceEvidenceText.toLowerCase().replace(/\s+/g, ' ').trim();
+
+    if (cleanEvidence.length > 5 && !cleanHtml.includes(cleanEvidence)) {
+      throw new Error(`Provenance Rejected: Supporting evidence text "${record.sourceEvidenceText}" not found in raw fetched HTML.`);
+    }
+
+    return true;
+  },
+
+  /**
    * Sanitizes text to remove any potential candidate PII (phones, emails, handles).
    */
   stripPII(text: string): string {

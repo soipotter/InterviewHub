@@ -7,7 +7,14 @@ export type IngestionStatus = 'pending_review' | 'approved' | 'rejected';
 export interface IngestionProvenance {
   sourceName: string;
   sourceUrl: string;
+  sourceRequestedUrl: string;
+  sourceFinalUrl: string;
   sourceType: SourceType;
+  sourcePageTitle: string;
+  sourceEvidenceText: string;
+  sourceEvidenceHash?: string | null;
+  sourceFetchedAt: string;
+  sourceHttpStatus: number;
   sourcePublishedAt?: string | null;
   originalText: string;
   normalizedQuestion: string;
