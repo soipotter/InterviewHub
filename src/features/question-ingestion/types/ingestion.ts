@@ -17,12 +17,18 @@ export interface IngestionProvenance {
   sourceEvidenceHash?: string | null;
   sourceFetchedAt: string;
   sourceHttpStatus: number;
+  sourcePostId?: string | null;
+  sourcePage?: number | null;
   sourcePublishedAt?: string | null;
   originalText: string;
   normalizedQuestion: string;
   extractionClassification: ExtractionClassification;
   company: string;
   role: string;
+  market: 'VN';
+  location?: string | null;
+  locationEvidence?: string | null;
+  marketVerification: 'verified' | 'uncertain';
   seniority: SeniorityLevel;
   round?: string | null;
   category: string;
