@@ -9,6 +9,7 @@ export type ExtractionClassification = 'EXPLICIT_QUESTION' | 'SPECIFIC_PROMPT' |
 export type SectionContext =
   | 'INTERVIEW_QUESTION'
   | 'INTERVIEW_PROMPT'
+  | 'LIVE_INTERVIEW_CASE_PROMPT'
   | 'INTERVIEW_TOPIC'
   | 'ASSESSMENT_TASK'
   | 'ADVICE'
@@ -17,13 +18,22 @@ export type SectionContext =
   | 'EVALUATION_AREA'
   | 'OTHER';
 
+export type QuestionDirection =
+  | 'INTERVIEWER_TO_CANDIDATE'
+  | 'CANDIDATE_TO_INTERVIEWER'
+  | 'AUTHOR_TO_COMMUNITY'
+  | 'COMMUNITY_TO_AUTHOR'
+  | 'AUTHOR_COMMENTARY'
+  | 'UNKNOWN';
+
 export type IngestionDecision =
   | 'KEEP'
   | 'SKIP_TOPIC_ONLY'
   | 'SKIP_ADVICE'
   | 'SKIP_ASSESSMENT_TASK'
   | 'SKIP_EVALUATION_AREA'
-  | 'SKIP_UNSUPPORTED';
+  | 'SKIP_UNSUPPORTED'
+  | 'SKIP_CAREER_ADVICE';
 
 export interface IngestionProvenance {
   sourceName: string;
