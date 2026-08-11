@@ -4,6 +4,8 @@ export type SeniorityLevel = 'Intern' | 'Fresher' | 'Junior' | 'Mid' | 'Senior' 
 
 export type IngestionStatus = 'pending_review' | 'approved' | 'rejected';
 
+export type ExtractionClassification = 'EXPLICIT_QUESTION' | 'SPECIFIC_PROMPT' | 'TOPIC_ONLY' | 'UNSUPPORTED';
+
 export interface IngestionProvenance {
   sourceName: string;
   sourceUrl: string;
@@ -18,6 +20,7 @@ export interface IngestionProvenance {
   sourcePublishedAt?: string | null;
   originalText: string;
   normalizedQuestion: string;
+  extractionClassification: ExtractionClassification;
   company: string;
   role: string;
   seniority: SeniorityLevel;
