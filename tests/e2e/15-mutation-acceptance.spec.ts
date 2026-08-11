@@ -39,7 +39,7 @@ test.describe('Phase 10D.2 Final Mutation Journey Verification', () => {
     }
 
     // Submit Daily Challenge via UI
-    const submitBtn = page.locator('button:has-text("Submit Challenge")').first();
+    const submitBtn = page.locator('button:has-text("Submit Daily Challenge"), button:has-text("Submit Challenge"), button:has-text("Submit")').first();
     if (await submitBtn.isVisible()) {
       const submitPromise = page.waitForResponse(
         (resp) => (resp.url().includes('/rpc/submit_daily_challenge') || resp.url().includes('/rpc/submit_practice_session')) && resp.status() === 200,

@@ -83,16 +83,17 @@ export default function DailyChallengePage() {
 
   // Active result = persisted (restored) OR freshly submitted
   const activeResult = persistedResult ?? localResult;
+  const activeResultId = activeResult?.attemptId;
 
   // Stats — refresh after successful submission
   const { stats, refresh: refreshStats } = useDailyChallengeStats(userId, challenge?.id);
 
   // Refresh stats after result becomes available
   useEffect(() => {
-    if (activeResult && isAuthenticated) {
+    if (activeResultId && isAuthenticated) {
       refreshStats();
     }
-  }, [activeResult, isAuthenticated, refreshStats]);
+  }, [activeResultId, isAuthenticated, refreshStats]);
 
   const pageIsLoading = isLoading || isCheckingCompletion;
 

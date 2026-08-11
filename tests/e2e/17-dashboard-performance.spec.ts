@@ -1,7 +1,13 @@
 import { test, expect } from '@playwright/test';
-import { loginAsUser } from '../helpers/auth';
+import { loginAsUser, hasUserCredentials } from '../helpers/auth';
+
+const SKIP_USER = 'QA user credentials (E2E_USER_EMAIL, E2E_USER_PASSWORD) not provided in environment';
 
 test.describe('Dashboard Performance & Network Efficiency Regression Suite', () => {
+  test.beforeEach(() => {
+    if (!hasUserCredentials()) test.skip(true, SKIP_USER);
+  });
+
   test('authenticated dashboard load triggers bounded network requests without excessive N+1 waterfalls', async ({
     page,
   }) => {

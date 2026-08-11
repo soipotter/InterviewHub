@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DailyChallengeStats } from '../types/dailyChallenge';
 import { dailyChallengeService } from '../services/dailyChallengeService';
 
@@ -42,7 +42,7 @@ export function useDailyChallengeStats(
     };
   }, [userId, challengeId, tick]);
 
-  const refresh = () => setTick((t) => t + 1);
+  const refresh = useCallback(() => setTick((t) => t + 1), []);
 
   return { stats, isLoading, refresh };
 }

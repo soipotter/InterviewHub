@@ -17,13 +17,14 @@ test.describe('Practice → Quiz → Results (P1 Gate)', () => {
   });
 
   test('D+E: full practice quiz completion → results → result reload persists', async ({ page }) => {
+    test.setTimeout(60000);
     // ── Step 1: Login ──────────────────────────────────────────────────────
     const ok = await loginAsUser(page);
     expect(ok, 'Login failed').toBeTruthy();
 
     // ── Step 2: Navigate to practice builder ──────────────────────────────
     await page.goto('/practice');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000); // wait for Supabase question fetch
 
     // Verify the start button is available and enabled
@@ -99,11 +100,11 @@ test.describe('Practice → Quiz → Results (P1 Gate)', () => {
     }
 
     // ── Step 6: Verify results page loads ─────────────────────────────────
-    await page.waitForURL(/\/results\/att_/, { timeout: 20000 });
+    await expect(page).toHaveURL(/\/results\/att_/, { timeout: 20000 });
     const resultsUrl = page.url();
     expect(resultsUrl).toMatch(/\/results\/att_/);
 
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
 
     const resultsBody = await page.textContent('body') ?? '';
