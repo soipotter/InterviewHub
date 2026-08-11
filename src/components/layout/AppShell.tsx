@@ -13,9 +13,9 @@ export interface AppShellProps {
 
 export const AppShell: React.FC<AppShellProps> = ({ header, footer, children, className }) => {
   return (
-    <div className={cn('min-h-screen flex flex-col bg-slate-900 text-slate-100', className)}>
+    <div className={cn('min-h-screen flex flex-col bg-slate-900 text-slate-100 overflow-x-hidden', className)}>
       {header || <Header />}
-      <main className="flex-1 py-8">
+      <main className="flex-1 py-8 overflow-x-hidden">
         <Container size="xl">{children}</Container>
       </main>
       {footer || <Footer />}

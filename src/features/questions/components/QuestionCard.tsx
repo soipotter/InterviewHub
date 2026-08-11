@@ -39,19 +39,19 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
             ~{question.estimatedMinutes} min read
           </span>
         </div>
-        <CardTitle className="text-base text-white group-hover:text-indigo-400 transition-colors leading-snug">
+        <CardTitle className="text-base text-white group-hover:text-indigo-400 transition-colors leading-snug break-words">
           <Link to={`/questions/${question.id}`} className="focus:outline-none focus:underline">
             {question.title}
           </Link>
         </CardTitle>
-        <CardDescription className="text-xs text-slate-400 line-clamp-2 mt-1 leading-relaxed">
+        <CardDescription className="text-xs text-slate-400 line-clamp-2 mt-1 leading-relaxed break-words">
           {question.shortSummary}
         </CardDescription>
       </CardHeader>
 
       <CardContent className="pt-0">
         <div className="flex items-center gap-1.5 flex-wrap pt-2">
-          <span className="text-[11px] text-slate-400 font-mono">Topic: {question.topic}</span>
+          <span className="text-[11px] text-slate-400 font-mono break-all line-clamp-1">Topic: {question.topic}</span>
         </div>
         <div className="flex items-center gap-1 flex-wrap mt-2">
           {question.tags.map((tag) => (

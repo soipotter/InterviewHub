@@ -25,7 +25,7 @@ export const QuestionBankPage: React.FC = () => {
 
   return (
     <AppShell>
-      <div className="flex flex-col gap-6 text-left pb-12">
+      <div className="flex flex-col gap-6 text-left pb-12 w-full max-w-full overflow-x-hidden">
         {/* Page Header */}
         <div className="flex flex-col gap-2 border-b border-slate-800 pb-6">
           <div className="flex items-center gap-3">
