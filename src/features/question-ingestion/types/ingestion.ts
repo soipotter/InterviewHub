@@ -6,6 +6,25 @@ export type IngestionStatus = 'pending_review' | 'approved' | 'rejected';
 
 export type ExtractionClassification = 'EXPLICIT_QUESTION' | 'SPECIFIC_PROMPT' | 'TOPIC_ONLY' | 'UNSUPPORTED';
 
+export type SectionContext =
+  | 'INTERVIEW_QUESTION'
+  | 'INTERVIEW_PROMPT'
+  | 'INTERVIEW_TOPIC'
+  | 'ASSESSMENT_TASK'
+  | 'ADVICE'
+  | 'INTERVIEWER_INFO'
+  | 'PROCESS_DESCRIPTION'
+  | 'EVALUATION_AREA'
+  | 'OTHER';
+
+export type IngestionDecision =
+  | 'KEEP'
+  | 'SKIP_TOPIC_ONLY'
+  | 'SKIP_ADVICE'
+  | 'SKIP_ASSESSMENT_TASK'
+  | 'SKIP_EVALUATION_AREA'
+  | 'SKIP_UNSUPPORTED';
+
 export interface IngestionProvenance {
   sourceName: string;
   sourceUrl: string;
