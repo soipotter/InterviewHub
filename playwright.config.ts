@@ -1,4 +1,19 @@
 import { defineConfig, devices } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
+
+// Load .env.local if present
+const envLocalPath = path.resolve('.env.local');
+if (fs.existsSync(envLocalPath)) {
+  const content = fs.readFileSync(envLocalPath, 'utf8');
+  content.split('\n').forEach(line => {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+      const [key, ...vals] = trimmed.split('=');
+      process.env[key.trim()] = vals.join('=').trim();
+    }
+  });
+}
 
 const baseURL = process.env.E2E_BASE_URL || 'https://interview-hubb.vercel.app';
 
