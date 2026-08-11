@@ -5,7 +5,7 @@ test.describe('Question Bank', () => {
     await page.goto('/questions');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000); // allow Supabase to return data
-    const questionLinks = page.locator('a[href*="/questions/q-"]');
+    const questionLinks = page.locator('a[href*="/questions/q-"], a[href*="/questions/comm-"]');
     const linkCount = await questionLinks.count();
     expect(linkCount, 'No question links found — question bank may not be loading data from Supabase').toBeGreaterThan(0);
   });
