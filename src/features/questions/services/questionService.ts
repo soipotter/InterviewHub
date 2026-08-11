@@ -70,15 +70,14 @@ export const questionService = {
    * Fetches a single published question by ID or slug from Supabase.
    */
   async getQuestionById(idOrSlug: string): Promise<Question | null> {
-    let query = supabase.from('questions').select('*, categories(*)').eq('status', 'published');
+    if (!idOrSlug) return null;
 
-    if (idOrSlug.startsWith('q-')) {
-      query = query.eq('id', idOrSlug);
-    } else {
-      query = query.eq('slug', idOrSlug);
-    }
-
-    const { data, error } = await query.maybeSingle();
+    const { data, error } = await supabase
+      .from('questions')
+      .select('*, categories(*)')
+      .eq('status', 'published')
+      .or(`id.eq.${idOrSlug},slug.eq.${idOrSlug}`)
+      .maybeSingle();
 
     if (error || !data) {
       return null;
