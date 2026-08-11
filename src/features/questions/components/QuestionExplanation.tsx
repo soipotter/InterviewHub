@@ -98,12 +98,24 @@ export const QuestionExplanation: React.FC<QuestionExplanationProps> = ({ questi
         </div>
       )}
 
+      {/* Model Answer / Answer Guidance for Subjective Formats */}
+      {question.modelAnswer && (
+        <div className="flex flex-col gap-3 rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-5 backdrop-blur-sm">
+          <h3 className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+            Model Answer / Answer Guidance
+          </h3>
+          <div className="text-sm text-slate-200 leading-relaxed font-sans whitespace-pre-line">
+            {question.modelAnswer}
+          </div>
+        </div>
+      )}
+
       {/* Detailed Explanation Section (Revealed or visible if no options) */}
       {(showExplanation || !hasOptions) && (
         <div className="flex flex-col gap-6 pt-2 animate-in fade-in duration-200">
           <div className="flex flex-col gap-3">
             <h2 className="text-lg font-bold text-white border-b border-slate-800 pb-2">
-              Detailed Explanation
+              {hasOptions ? 'Detailed Explanation' : 'Explanation & Key Points'}
             </h2>
             <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-line font-sans space-y-3">
               {question.explanationMarkdown || question.shortSummary}

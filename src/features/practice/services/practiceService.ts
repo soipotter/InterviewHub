@@ -68,6 +68,8 @@ export const practiceService = {
 
     if (config.type && config.type !== 'All') {
       query = query.eq('type', config.type);
+    } else {
+      query = query.in('type', ['Multiple Choice', 'True/False', 'multiple_choice', 'true_false']);
     }
 
     const { data, error } = await query;

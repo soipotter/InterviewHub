@@ -20,6 +20,7 @@ export interface DbQuestionRow {
   interview_tip?: string | null;
   options?: string[] | null;
   correct_answer?: string | null;
+  model_answer?: string | null;
   tags: string[];
   sources?: QuestionSource[] | null;
   estimated_minutes: number;
@@ -47,6 +48,7 @@ export function mapRowToQuestion(row: DbQuestionRow): Question {
     estimatedMinutes: row.estimated_minutes || 3,
     options: row.options || undefined,
     correctAnswer: row.correct_answer || undefined,
+    modelAnswer: row.model_answer || undefined,
     explanationMarkdown: row.explanation || undefined,
     interviewTip: row.interview_tip || undefined,
     codeSnippet: row.code_snippet || undefined,

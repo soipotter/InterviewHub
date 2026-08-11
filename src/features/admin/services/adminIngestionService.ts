@@ -68,6 +68,11 @@ export const adminIngestionService = {
       sourcePostId: row.source_post_id || null,
       sourcePage: row.source_page || null,
       questionDirection: row.question_direction || 'INTERVIEWER_TO_CANDIDATE',
+      questionFormat: row.question_format || 'open_ended',
+      sourceClassification: row.source_classification || 'actual_question',
+      options: row.options || null,
+      correctAnswer: row.correct_answer || null,
+      modelAnswer: row.model_answer || null,
     }));
   },
 

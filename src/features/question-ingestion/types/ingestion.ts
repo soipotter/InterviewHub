@@ -1,3 +1,5 @@
+import { QuestionFormat, SourceClassification } from '../../questions/types/question';
+
 export type SourceType = 'forum' | 'reddit' | 'blog' | 'generic_article';
 
 export type SeniorityLevel = 'Intern' | 'Fresher' | 'Junior' | 'Mid' | 'Senior' | 'Lead' | 'Unknown';
@@ -52,6 +54,8 @@ export interface IngestionProvenance {
   originalText: string;
   normalizedQuestion: string;
   extractionClassification: ExtractionClassification;
+  sourceClassification?: SourceClassification;
+  questionFormat?: QuestionFormat;
   company: string;
   role: string;
   market: 'VN';
@@ -64,6 +68,9 @@ export interface IngestionProvenance {
   category: string;
   difficulty: 'Beginner' | 'Junior' | 'Intermediate' | 'Advanced';
   confidence: number; // 0.0 to 1.0
+  options?: string[] | null;
+  correctAnswer?: string | null;
+  modelAnswer?: string | null;
   importedAt: string;
 }
 

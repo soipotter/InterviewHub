@@ -306,6 +306,12 @@ export const AdminIngestionPage: React.FC = () => {
 
                   {/* Metadata Tags */}
                   <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                    <span className="bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded text-emerald-300">
+                      Classification: <strong>{(q.sourceClassification || 'actual_question').replace(/_/g, ' ').toUpperCase()}</strong>
+                    </span>
+                    <span className="bg-indigo-950/40 border border-indigo-500/30 px-2 py-0.5 rounded text-indigo-300">
+                      Format: <strong>{(q.questionFormat || 'open_ended').replace(/_/g, ' ').toUpperCase()}</strong>
+                    </span>
                     <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-slate-300">
                       Category: <strong>{q.category}</strong>
                     </span>
@@ -341,8 +347,15 @@ export const AdminIngestionPage: React.FC = () => {
                         <Button
                           variant="primary"
                           size="sm"
-                          onClick={() => handleApprove(q.id)}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs"
+                          disabled={q.sourceClassification === 'not_a_question' || q.sourceClassification === 'insufficient_evidence'}
+                          onClick={() => {
+                            if (q.sourceClassification === 'not_a_question' || q.sourceClassification === 'insufficient_evidence') {
+                              setIngestMessage(`Cannot publish candidate ${q.id}: classification is "${q.sourceClassification}" (Not A Question). Must reject or reclassify.`);
+                              return;
+                            }
+                            handleApprove(q.id);
+                          }}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           ✓ Approve &amp; Publish
                         </Button>

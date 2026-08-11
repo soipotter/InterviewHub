@@ -1,4 +1,5 @@
 import { IngestionProvenance, RawCandidatePost, SeniorityLevel } from '../types/ingestion';
+import { QuestionFormat, SourceClassification } from '../../questions/types/question';
 
 export const extractionService = {
   /**
@@ -168,6 +169,76 @@ export const extractionService = {
   },
 
   /**
+   * Classifies source text to determine whether it contains a genuine interview question or merely advice/commentary.
+   */
+  classifySourceContent(text: string): SourceClassification {
+    const lower = text.toLowerCase();
+    // Non-question indicator patterns (advice, experience commentary, opinion, process, tips)
+    if (
+      lower.includes('phong cách code') ||
+      lower.includes('không quá khó') ||
+      lower.includes('chủ yếu xem') ||
+      lower.includes('thân thiện') ||
+      lower.includes('phòng sạch đẹp') ||
+      lower.includes('lương thỏa thuận') ||
+      lower.includes('kinh nghiệm phỏng vấn') ||
+      lower.includes('chia sẻ kinh nghiệm') ||
+      lower.includes('chúc may mắn') ||
+      lower.includes('review công ty')
+    ) {
+      return 'not_a_question';
+    }
+
+    if (text.includes('?') && text.length >= 15) {
+      return 'actual_question';
+    }
+
+    if (text.length >= 25 && (lower.includes('hỏi về') || lower.includes('yêu cầu') || lower.includes('bài test'))) {
+      return 'question_with_context';
+    }
+
+    if (text.length < 15) {
+      return 'insufficient_evidence';
+    }
+
+    return 'actual_question';
+  },
+
+  /**
+   * Classifies question format based on semantic indicators in source text.
+   */
+  classifyQuestionFormat(text: string): QuestionFormat {
+    const lower = text.toLowerCase();
+    if (
+      lower.includes('coding') ||
+      lower.includes('leetcode') ||
+      lower.includes('thuật toán') ||
+      lower.includes('viết hàm') ||
+      lower.includes('implement') ||
+      lower.includes('lru')
+    ) {
+      return 'coding';
+    }
+
+    if (
+      lower.includes('system design') ||
+      lower.includes('thiết kế hệ thống') ||
+      lower.includes('latency') ||
+      lower.includes('scale') ||
+      lower.includes('tradeoff') ||
+      lower.includes('production incident')
+    ) {
+      return 'scenario';
+    }
+
+    if (lower.includes('true/false') || lower.includes('đúng hay sai') || lower.includes('true or false')) {
+      return 'true_false';
+    }
+
+    return 'open_ended';
+  },
+
+  /**
    * Extracts Candidate-Reported interview questions from raw post content.
    * STRICT INVARIANT: Questions must originate from real source text. Never invent questions.
    */
@@ -206,6 +277,8 @@ export const extractionService = {
       const category = this.detectCategory(rawLine);
       const difficulty = this.detectDifficulty(rawLine, seniority);
       const round = this.detectRound(post.title + ' ' + rawLine);
+      const sourceClassification = this.classifySourceContent(rawLine);
+      const questionFormat = this.classifyQuestionFormat(rawLine);
 
       provenanceList.push({
         sourceName: post.sourceName,
@@ -226,6 +299,8 @@ export const extractionService = {
         sourceFetchedAt: new Date().toISOString(),
         sourceHttpStatus: 200,
         extractionClassification: 'EXPLICIT_QUESTION',
+        sourceClassification,
+        questionFormat,
         market: 'VN',
         location: null,
         locationEvidence: null,
@@ -236,6 +311,9 @@ export const extractionService = {
         category,
         difficulty,
         confidence: 0.95,
+        options: null,
+        correctAnswer: null,
+        modelAnswer: rawLine,
         importedAt: new Date().toISOString(),
       });
     }

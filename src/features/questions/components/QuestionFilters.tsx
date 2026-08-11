@@ -39,6 +39,9 @@ const TYPE_OPTIONS: Array<{ value: QuestionType | 'All'; label: string }> = [
   { value: 'All', label: 'All Question Types' },
   { value: 'Multiple Choice', label: 'Multiple Choice' },
   { value: 'True/False', label: 'True / False' },
+  { value: 'Open-ended', label: 'Open-ended' },
+  { value: 'Coding', label: 'Coding' },
+  { value: 'Scenario', label: 'Scenario' },
 ];
 
 export const QuestionFilters: React.FC<QuestionFiltersProps> = ({
