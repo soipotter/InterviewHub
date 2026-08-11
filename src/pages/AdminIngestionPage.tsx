@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { AdminLayout } from '../features/admin/components/AdminLayout';
 import { Card, CardContent } from '../components/ui/Card';
 import { Badge, BadgeVariant } from '../components/ui/Badge';
@@ -8,15 +9,25 @@ import { Alert } from '../components/ui/Alert';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { adminIngestionService } from '../features/admin/services/adminIngestionService';
-import { IngestedQuestion, IngestionStatus } from '../features/question-ingestion/types/ingestion';
+import { IngestedQuestion } from '../features/question-ingestion/types/ingestion';
 import { ingestionService } from '../features/question-ingestion/services/ingestionService';
+
+export type ExtendedStatusFilter = 'pending_review' | 'accepted' | 'published' | 'rejected' | 'all';
 
 export const AdminIngestionPage: React.FC = () => {
   const [questions, setQuestions] = useState<IngestedQuestion[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [statusFilter, setStatusFilter] = useState<IngestionStatus | 'all'>('pending_review');
+  const [statusFilter, setStatusFilter] = useState<ExtendedStatusFilter>('pending_review');
   const [duplicateFilter, setDuplicateFilter] = useState<boolean>(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Summary counts state
+  const [counts, setCounts] = useState<{
+    pending: number;
+    accepted: number;
+    published: number;
+    rejected: number;
+  }>({ pending: 0, accepted: 0, published: 0, rejected: 0 });
 
   // Editing state
   const [editingQuestion, setEditingQuestion] = useState<IngestedQuestion | null>(null);
@@ -29,11 +40,32 @@ export const AdminIngestionPage: React.FC = () => {
   const fetchIngestedData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await adminIngestionService.getIngestedQuestions({
-        status: statusFilter,
-        duplicateOnly: duplicateFilter,
-      });
-      setQuestions(data);
+      // Fetch all questions for authoritative counting
+      const allData = await adminIngestionService.getIngestedQuestions({ status: 'all' });
+
+      const pending = allData.filter((q) => q.status === 'pending_review').length;
+      const accepted = allData.filter((q) => q.status === 'approved' && !q.publishedQuestionId).length;
+      const published = allData.filter((q) => q.status === 'approved' && Boolean(q.publishedQuestionId)).length;
+      const rejected = allData.filter((q) => q.status === 'rejected').length;
+      setCounts({ pending, accepted, published, rejected });
+
+      // Apply filter locally
+      let filtered = allData;
+      if (statusFilter === 'pending_review') {
+        filtered = filtered.filter((q) => q.status === 'pending_review');
+      } else if (statusFilter === 'accepted') {
+        filtered = filtered.filter((q) => q.status === 'approved' && !q.publishedQuestionId);
+      } else if (statusFilter === 'published') {
+        filtered = filtered.filter((q) => q.status === 'approved' && Boolean(q.publishedQuestionId));
+      } else if (statusFilter === 'rejected') {
+        filtered = filtered.filter((q) => q.status === 'rejected');
+      }
+
+      if (duplicateFilter) {
+        filtered = filtered.filter((q) => q.isDuplicateFlagged);
+      }
+
+      setQuestions(filtered);
     } catch {
       setQuestions([]);
     } finally {
@@ -65,7 +97,6 @@ export const AdminIngestionPage: React.FC = () => {
     setIsIngesting(true);
     setIngestMessage(null);
     try {
-      // Automatic Voz Discovery & Sync run
       setIngestMessage('Discovering new public VOZ interview sources & running incremental sync...');
       setTimeout(() => {
         setIngestMessage(
@@ -80,8 +111,13 @@ export const AdminIngestionPage: React.FC = () => {
     }
   };
 
-  const handleApprove = async (id: string) => {
-    await adminIngestionService.approveIngestedQuestion(id);
+  const handleAccept = async (id: string) => {
+    await adminIngestionService.acceptIngestedQuestion(id);
+    void fetchIngestedData();
+  };
+
+  const handlePublish = async (id: string) => {
+    await adminIngestionService.publishIngestedQuestion(id);
     void fetchIngestedData();
   };
 
@@ -102,7 +138,9 @@ export const AdminIngestionPage: React.FC = () => {
 
   const handleBulkApprove = async () => {
     if (selectedIds.size === 0) return;
-    await adminIngestionService.bulkApprove(Array.from(selectedIds));
+    for (const id of Array.from(selectedIds)) {
+      await adminIngestionService.acceptIngestedQuestion(id);
+    }
     setSelectedIds(new Set());
     void fetchIngestedData();
   };
@@ -114,16 +152,20 @@ export const AdminIngestionPage: React.FC = () => {
     void fetchIngestedData();
   };
 
-  const getStatusBadgeVariant = (status: IngestionStatus): BadgeVariant => {
-    switch (status) {
-      case 'approved':
-        return 'success';
-      case 'rejected':
-        return 'danger';
-      case 'pending_review':
-      default:
-        return 'warning';
+  const getStatusBadgeVariant = (q: IngestedQuestion): BadgeVariant => {
+    if (q.status === 'rejected') return 'danger';
+    if (q.status === 'approved') {
+      return q.publishedQuestionId ? 'info' : 'success';
     }
+    return 'warning';
+  };
+
+  const getStatusLabel = (q: IngestedQuestion): string => {
+    if (q.status === 'rejected') return 'REJECTED';
+    if (q.status === 'approved') {
+      return q.publishedQuestionId ? 'PUBLISHED' : 'ACCEPTED (UNPUBLISHED)';
+    }
+    return 'PENDING REVIEW';
   };
 
   return (
@@ -139,14 +181,15 @@ export const AdminIngestionPage: React.FC = () => {
               Review and moderate candidate-reported interview questions discovered from Vietnam IT sources.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex items-center gap-2">
             <Button
-              variant="primary"
+              variant="outline"
               size="sm"
               onClick={handleSyncVozNow}
               isLoading={isIngesting}
-              id="sync-voz-now-btn"
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-md shadow-emerald-900/30"
+              id="sync-voz-btn"
+              className="border-emerald-500/40 text-emerald-300 hover:bg-emerald-950/40"
             >
               🔄 Sync VOZ Now
             </Button>
@@ -163,34 +206,33 @@ export const AdminIngestionPage: React.FC = () => {
           </div>
         </div>
 
-        {/* VOZ Discovery Sources Card */}
-        <Card className="border-emerald-500/20 bg-emerald-950/10 backdrop-blur-sm">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold">
-                  VOZ
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-200">VOZ Forum Discovery Registry</h3>
-                  <p className="text-xs text-slate-400">
-                    Thread 206897 (102 pages complete) • Status: <span className="text-emerald-400 font-medium">Historical Complete</span> • Auto-Sync: <span className="text-slate-300 font-medium">Active (24h)</span>
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 text-xs">
-                <div>
-                  <span className="text-slate-500 block text-[10px] uppercase tracking-wider">Collected</span>
-                  <span className="text-slate-200 font-semibold">88 Questions</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[10px] uppercase tracking-wider">Last Processed</span>
-                  <span className="text-emerald-400 font-semibold">Page 102</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Authoritative Workflow Summary Card */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <Card className="border-amber-500/30 bg-amber-950/20">
+            <CardContent className="p-4">
+              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">Pending Review</span>
+              <span className="text-2xl font-extrabold text-white mt-1 block">{counts.pending}</span>
+            </CardContent>
+          </Card>
+          <Card className="border-emerald-500/30 bg-emerald-950/20">
+            <CardContent className="p-4">
+              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Accepted / Ready</span>
+              <span className="text-2xl font-extrabold text-white mt-1 block">{counts.accepted}</span>
+            </CardContent>
+          </Card>
+          <Card className="border-cyan-500/30 bg-cyan-950/20">
+            <CardContent className="p-4">
+              <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">Published</span>
+              <span className="text-2xl font-extrabold text-white mt-1 block">{counts.published}</span>
+            </CardContent>
+          </Card>
+          <Card className="border-rose-500/30 bg-rose-950/20">
+            <CardContent className="p-4">
+              <span className="text-[10px] font-bold text-rose-400 uppercase tracking-wider block">Rejected</span>
+              <span className="text-2xl font-extrabold text-white mt-1 block">{counts.rejected}</span>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Notification Alert */}
         {ingestMessage && (
@@ -204,7 +246,7 @@ export const AdminIngestionPage: React.FC = () => {
           <CardContent className="pt-4 flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-slate-400 font-semibold mr-1">Filter Status:</span>
-              {(['pending_review', 'approved', 'rejected', 'all'] as const).map((st) => (
+              {(['pending_review', 'accepted', 'published', 'rejected', 'all'] as const).map((st) => (
                 <Button
                   key={st}
                   variant={statusFilter === st ? 'primary' : 'ghost'}
@@ -235,7 +277,7 @@ export const AdminIngestionPage: React.FC = () => {
                   Selected: <strong>{selectedIds.size}</strong>
                 </span>
                 <Button variant="primary" size="sm" onClick={handleBulkApprove} className="bg-emerald-600 text-xs">
-                  ✓ Bulk Approve
+                  ✓ Bulk Accept
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleBulkReject} className="text-rose-400 border-rose-500/40 text-xs">
                   ✕ Bulk Reject
@@ -245,7 +287,7 @@ export const AdminIngestionPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Questions Table / List View */}
+        {/* Questions List */}
         {isLoading ? (
           <div className="flex items-center justify-center py-20 text-slate-400 gap-3">
             <Spinner size="md" />
@@ -257,7 +299,7 @@ export const AdminIngestionPage: React.FC = () => {
               <span className="text-3xl">📥</span>
               <h3 className="text-sm font-semibold text-white">No Ingested Questions Found</h3>
               <p className="text-xs text-slate-400 max-w-md">
-                Click <strong>Run Ingestion Crawler</strong> above to crawl candidate-reported interview experiences from Voz, Reddit, and Vietnam tech blogs.
+                No questions match the current filter criteria.
               </p>
             </CardContent>
           </Card>
@@ -273,8 +315,8 @@ export const AdminIngestionPage: React.FC = () => {
                       onChange={() => handleToggleSelect(q.id)}
                       className="rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500"
                     />
-                    <Badge variant={getStatusBadgeVariant(q.status)} size="sm">
-                      {q.status.replace('_', ' ').toUpperCase()}
+                    <Badge variant={getStatusBadgeVariant(q)} size="sm">
+                      {getStatusLabel(q)}
                     </Badge>
                     {q.isDuplicateFlagged && (
                       <Badge variant="warning" size="sm" className="bg-amber-950/60 text-amber-300 border-amber-500/40">
@@ -321,14 +363,9 @@ export const AdminIngestionPage: React.FC = () => {
                     <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-slate-300">
                       Seniority: <strong>{q.seniority}</strong>
                     </span>
-                    {q.round && (
-                      <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-slate-300">
-                        Round: <strong>{q.round}</strong>
-                      </span>
-                    )}
                   </div>
 
-                  {/* Actions */}
+                  {/* Actions per candidate state */}
                   <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/80">
                     <Button
                       variant="outline"
@@ -342,22 +379,17 @@ export const AdminIngestionPage: React.FC = () => {
                       ✏️ Edit Metadata
                     </Button>
 
+                    {/* Case 1: Pending Review */}
                     {q.status === 'pending_review' && (
                       <>
                         <Button
                           variant="primary"
                           size="sm"
                           disabled={q.sourceClassification === 'not_a_question' || q.sourceClassification === 'insufficient_evidence'}
-                          onClick={() => {
-                            if (q.sourceClassification === 'not_a_question' || q.sourceClassification === 'insufficient_evidence') {
-                              setIngestMessage(`Cannot publish candidate ${q.id}: classification is "${q.sourceClassification}" (Not A Question). Must reject or reclassify.`);
-                              return;
-                            }
-                            handleApprove(q.id);
-                          }}
+                          onClick={() => handleAccept(q.id)}
                           className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          ✓ Approve &amp; Publish
+                          ✓ Accept (Review Approval)
                         </Button>
                         <Button
                           variant="outline"
@@ -368,6 +400,37 @@ export const AdminIngestionPage: React.FC = () => {
                           ✕ Reject
                         </Button>
                       </>
+                    )}
+
+                    {/* Case 2: Accepted & Unpublished */}
+                    {q.status === 'approved' && !q.publishedQuestionId && (
+                      <>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handlePublish(q.id)}
+                          className="bg-cyan-600 hover:bg-cyan-500 text-white text-xs"
+                        >
+                          🚀 Publish to Question Bank
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleReject(q.id)}
+                          className="border-rose-500/40 text-rose-400 hover:bg-rose-950/40 text-xs"
+                        >
+                          ✕ Reject
+                        </Button>
+                      </>
+                    )}
+
+                    {/* Case 3: Published */}
+                    {q.status === 'approved' && q.publishedQuestionId && (
+                      <Link to={`/questions/${q.publishedQuestionId}`}>
+                        <Button variant="outline" size="sm" className="border-indigo-500/40 text-indigo-300 hover:bg-indigo-950/40 text-xs">
+                          🔗 View Published Question &rarr;
+                        </Button>
+                      </Link>
                     )}
                   </div>
                 </CardContent>
@@ -410,16 +473,13 @@ export const AdminIngestionPage: React.FC = () => {
                   variant="primary"
                   size="sm"
                   onClick={async () => {
-                    await adminIngestionService.approveIngestedQuestion(
-                      editingQuestion.id,
-                      editingQuestion
-                    );
+                    await adminIngestionService.acceptIngestedQuestion(editingQuestion.id);
                     setShowEditModal(false);
                     void fetchIngestedData();
                   }}
                   className="bg-emerald-600 text-white"
                 >
-                  Save &amp; Approve
+                  Save &amp; Accept
                 </Button>
               </div>
             </div>

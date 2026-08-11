@@ -77,14 +77,34 @@ export const adminIngestionService = {
   },
 
   /**
-   * Approves an ingested question and publishes it into public.questions via RPC.
+   * Accepts an ingested question (review approval ONLY). Sets status = 'approved', publishedQuestionId remains NULL.
+   * Does NOT insert into public.questions.
    */
-  async approveIngestedQuestion(
+  async acceptIngestedQuestion(
+    questionId: string
+  ): Promise<{ success: boolean }> {
+    const { data, error } = await supabase.rpc('accept_ingested_question', {
+      p_candidate_id: questionId,
+    });
+
+    if (error) {
+      console.error('[InterviewHub] Error accepting ingested question:', error);
+      throw new Error(`Failed to accept candidate question: ${error.message}`);
+    }
+
+    const res = data as { success: boolean };
+    return { success: res.success };
+  },
+
+  /**
+   * Publishes an accepted candidate question into public.questions via RPC.
+   */
+  async publishIngestedQuestion(
     questionId: string,
     editedMetadata?: Partial<IngestedQuestion>
   ): Promise<{ success: boolean; publishedQuestionId?: string }> {
-    const { data, error } = await supabase.rpc('approve_ingested_question', {
-      p_ingested_id: questionId,
+    const { data, error } = await supabase.rpc('publish_ingested_question', {
+      p_candidate_id: questionId,
       p_normalized_question: editedMetadata?.normalizedQuestion || null,
       p_company: editedMetadata?.company || null,
       p_role: editedMetadata?.role || null,
@@ -93,8 +113,8 @@ export const adminIngestionService = {
     });
 
     if (error) {
-      console.error('[InterviewHub] Error approving ingested question:', error);
-      throw new Error(`Failed to approve ingested question: ${error.message}`);
+      console.error('[InterviewHub] Error publishing candidate question:', error);
+      throw new Error(`Failed to publish candidate question: ${error.message}`);
     }
 
     const res = data as { success: boolean; published_question_id?: string };
@@ -105,22 +125,29 @@ export const adminIngestionService = {
   },
 
   /**
-   * Rejects an ingested candidate question with a reason.
+   * Deprecated atomic approve-and-publish call for backward compatibility.
+   */
+  async approveIngestedQuestion(
+    questionId: string,
+    editedMetadata?: Partial<IngestedQuestion>
+  ): Promise<{ success: boolean; publishedQuestionId?: string }> {
+    return this.publishIngestedQuestion(questionId, editedMetadata);
+  },
+
+  /**
+   * Rejects an ingested candidate question with a reason using SECURITY DEFINER RPC.
    */
   async rejectIngestedQuestion(
     questionId: string,
-    rejectionReason: string
+    rejectionReason?: string
   ): Promise<{ success: boolean }> {
-    const { error } = await supabase
-      .from('ingested_questions')
-      .update({
-        status: 'rejected',
-        rejection_reason: rejectionReason,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', questionId);
+    const { error } = await supabase.rpc('reject_ingested_question', {
+      p_candidate_id: questionId,
+      p_reason: rejectionReason || 'Rejected by admin during curation',
+    });
 
     if (error) {
+      console.error('[InterviewHub] Error rejecting candidate question:', error);
       throw new Error(`Failed to reject question: ${error.message}`);
     }
 
